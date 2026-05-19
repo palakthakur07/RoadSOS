@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+)<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -32,7 +32,7 @@
   --border2:  rgba(255,255,255,0.14);
 
   /* Alert palette */
-  --red:      #a11d26;
+  --red:      #ce2d38;
   --red2:     #9f343b;
   --red-dim:  rgba(255,45,59,0.15);
   --amber:    #ffb800;
@@ -623,6 +623,7 @@ nav {
   overflow: hidden;
 }
 .service-card::before {
+  pointer-events: none;
   content: '';
   position: absolute;
   inset: 0;
@@ -1109,7 +1110,7 @@ footer {
     <!-- Scrolling alert ticker -->
     <div class="ticker-wrap" aria-live="polite">
       <div class="ticker-track" id="ticker">
-        <span class="ticker-item">🚨 ACCIDENT ALERT — NH-44 KM 23</span>
+        <span class="ticker-item">🚨 NCRB 2022: 4.6 LAKH ROAD ACCIDENTS IN INDIA</span>
         <span class="ticker-sep"> ◆ </span>
         <span class="ticker-item">🏥 AIIMS Delhi — 3 beds available</span>
         <span class="ticker-sep"> ◆ </span>
@@ -1272,7 +1273,7 @@ footer {
           <div class="resp-label"><span>Response time</span><span style="color:var(--blue2)">~6 min avg</span></div>
           <div class="resp-track"><div class="resp-fill b" style="width:0%" data-w="55%"></div></div>
         </div>
-        <button class="call-btn b" onclick="callService('Police Emergency','100')">📞 Call 100 — Police</button>
+        <button class="call-btn b" onclick="callService('Police Emergency','100','#1e90ff')">📞 Call 100 — Police</button>
       </div>
 
       <!-- ── Towing ── -->
@@ -1292,7 +1293,7 @@ footer {
           <div class="resp-label"><span>Response time</span><span style="color:var(--amber2)">~12 min avg</span></div>
           <div class="resp-track"><div class="resp-fill a" style="width:0%" data-w="42%"></div></div>
         </div>
-        <button class="call-btn a" onclick="callService('NHAI Towing','1033')">📞 Call 1033 — NHAI</button>
+        <button class="call-btn a" onclick="callService('NHAI Towing','1033','#ffb400')">📞 Call 1033 — NHAI</button>
       </div>
 
       <!-- ── Road Accident Helpline ── -->
@@ -1312,7 +1313,7 @@ footer {
           <div class="resp-label"><span>System uptime</span><span style="color:var(--green2)">99.9% SLA</span></div>
           <div class="resp-track"><div class="resp-fill" style="width:0%;background:linear-gradient(90deg,var(--green),var(--green2));" data-w="92%"></div></div>
         </div>
-        <button class="call-btn g" onclick="callService('National Emergency','112')">📞 Call 112 — Emergency</button>
+        <button class="call-btn g" onclick="callService('National Emergency','112','#00d68f')">📞 Call 112 — Emergency</button>
       </div>
     </div>
 
@@ -1421,13 +1422,19 @@ footer {
 ───────────────────────────────────────────────────────────── -->
 <footer>
   <div class="footer-inner">
+
     <div class="footer-copy">
-      <strong>RoadSoS</strong> — AI-powered Emergency Response Platform<br/>
-      Built for the <strong>IIT Madras Road Safety Hackathon</strong> · All emergency numbers are real and verified.
+      <strong>RoadSoS</strong> — AI-Powered Emergency Response & Roadside Assistance Platform<br/><br/>
+
+      RoadSoS helps users get immediate support during roadside emergencies by connecting them with verified emergency contacts, nearby services, and real-time assistance.<br/><br/>
+
+      From accident response and ambulance access to towing support, fuel delivery, and emergency guidance, RoadSoS is designed to make roads safer and emergency help faster, smarter, and more accessible for everyone.
     </div>
+
     <div class="iit-badge">
-      🎓 IIT Madras Hackathon 2024
+      🚨 24/7 Emergency Support
     </div>
+
   </div>
 </footer>
 
@@ -1435,10 +1442,26 @@ footer {
      JAVASCRIPT
 ───────────────────────────────────────────────────────────── -->
 <script>
+
+  // ── Capture user GPS location on page load ──
+window.userLat = null;
+window.userLng = null;
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      window.userLat = pos.coords.latitude;
+      window.userLng = pos.coords.longitude;
+      console.log('GPS:', window.userLat, window.userLng);
+    },
+    err => console.log('Location denied')
+  );
+}
+
 /* ════════════════════════════════════════════════════════════
    ANIMATED ROAD CANVAS
    Draws moving dashed road lines in the background.
 ════════════════════════════════════════════════════════════ */
+
 (function initRoadCanvas() {
   const canvas = document.getElementById('road-canvas');
   const ctx = canvas.getContext('2d');
@@ -1530,9 +1553,9 @@ function countUp(id, target, duration, suffix) {
   }, 16);
 }
 setTimeout(() => {
-  countUp('counter-incidents', 14832, 1800);
-  countUp('counter-centers',  247, 1600);
-  countUp('counter-saved',    3921, 2000);
+  countUp('counter-incidents',  478000, 1800);
+  countUp('counter-centers',  812, 1600);
+  countUp('counter-saved',    172000, 2000);
 }, 400);
 
 /* ════════════════════════════════════════════════════════════
@@ -1560,22 +1583,16 @@ function animateServiceBars() {
 }
 
 /* Service call button */
-function callService(name, num) {
-  const msg = `Connecting to ${name}... Dial ${num}`;
-  const toast = document.createElement('div');
-  toast.style.cssText = `
-    position:fixed;bottom:28px;right:28px;z-index:9999;
-    background:#ff2d3b;color:#fff;
-    padding:14px 22px;border-radius:10px;
-    font-family:var(--font-b);font-weight:600;font-size:15px;
-    box-shadow:0 0 28px rgba(255,45,59,0.6);
-    animation:fadeUp 0.3s ease;
-  `;
-  toast.textContent = '📞 ' + msg;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3500);
+function callService(name, num, color) {
+  color = color || '#ff2d3b';
+  const d = document.getElementById('call-toast');
+  if(d) d.remove();
+  const t = document.createElement('div');
+  t.id = 'call-toast';
+  t.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:'+color+';color:white;padding:30px 40px;border-radius:16px;font-size:24px;font-weight:bold;z-index:999999;text-align:center;box-shadow:0 0 40px '+color+'99;';
+  t.innerHTML = '📞 ' + name + '<br>' + num + '<br><br><button onclick="this.parentElement.remove()" style="padding:8px 24px;border-radius:8px;border:none;background:white;color:'+color+';font-weight:bold;cursor:pointer;font-size:16px;">Close</button>';
+  document.body.appendChild(t);
 }
-
 /* ════════════════════════════════════════════════════════════
    LEAFLET MAP
 ════════════════════════════════════════════════════════════ */
@@ -1911,31 +1928,43 @@ function addMsg(html, role) {
   container.scrollTop = container.scrollHeight;
 }
 
-function sendChat() {
+async function sendChat() {
   const input = document.getElementById('chat-input');
-  const text = input.value.trim();
+  const text  = input.value.trim();
   if (!text) return;
   input.value = '';
 
-  // User message
+  // Show user message
   addMsg(`<div class="msg-bubble">${text}</div>`, 'user');
 
-  // Typing indicator
+  // Show typing indicator
   const typingDiv = document.createElement('div');
   typingDiv.className = 'msg bot';
   typingDiv.id = 'typing-indicator';
-  typingDiv.innerHTML = `<span class="msg-avatar" aria-hidden="true">🤖</span>
+  typingDiv.innerHTML = `<span class="msg-avatar">🤖</span>
     <div><div class="typing-anim"><span></span><span></span><span></span></div></div>`;
   document.getElementById('chat-messages').appendChild(typingDiv);
   document.getElementById('chat-messages').scrollTop = 99999;
 
-  // Simulate response delay
-  setTimeout(() => {
+  try {
+    const response = await fetch('http://localhost:5000/chat', {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({ message: text, lat: window.userLat || 28.715, lng: window.userLng || 77.085 })
+    });
+    const data = await response.json();
     document.getElementById('typing-indicator')?.remove();
-    const key = classify(text);
-    const botHtml = key ? buildBotMsg(RESPONSES[key]) : getFallback();
-    addMsg(botHtml, 'bot');
-  }, 900 + Math.random() * 600);
+  const formatted = data.reply
+  .replace(/\n/g, '<br>')
+  .replace(/\?([0-9])/g, 'Rs.$1')
+  .replace(/\?\?/g, '')
+  .trim();
+addMsg(`<div class="msg-bubble">${formatted}</div>`, 'bot');
+
+  } catch(err) {
+    document.getElementById('typing-indicator')?.remove();
+    addMsg(`<div class="msg-bubble">⚠️ AI offline. For emergencies call <strong>112</strong>!</div>`, 'bot');
+  }
 }
 
 function quickChat(text) {
