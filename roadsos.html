@@ -1607,6 +1607,14 @@ function animateServiceBars() {
 
 /* Service call button */
 function callService(name, num, color) {
+  // On mobile — dial directly!
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile) {
+    window.location.href = 'tel:' + num;
+    return;
+  }
+  
+  // On desktop — show popup
   color = color || '#ff2d3b';
   const d = document.getElementById('call-toast');
   if(d) d.remove();
