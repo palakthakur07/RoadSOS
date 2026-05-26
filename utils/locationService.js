@@ -50,8 +50,10 @@ function httpGet(url, extraHeaders = {}) {
     const lib = url.startsWith("https") ? https : http;
     const options = {
       headers: {
-        "User-Agent": "RoadSoS-Emergency-API/1.0 (IIT Madras Hackathon)",
-        Accept      : "application/json",
+        "User-Agent": "RoadSoS-IITMadras-Hackathon/1.0 (roadsos@iitm.ac.in)",
+        "Accept"        : "application/json",
+        "Accept-Language": "en",
+        "Referer"       : "http://localhost:5500",
         ...extraHeaders,
       },
     };
@@ -72,7 +74,7 @@ function httpGet(url, extraHeaders = {}) {
       });
     });
 
-    req.setTimeout(8000, () => {
+   req.setTimeout(20000, () => {
       req.destroy();
       reject(new Error(`Request timed out after 8 s: ${url.split("?")[0]}`));
     });
@@ -152,28 +154,69 @@ const OSM_AMENITIES = {
   police   : ["police"],
   towing   : ["car_repair", "tyres", "fuel", "vehicle_inspection"],
 };
-
 async function fetchFromOSM(lat, lng, category, radiusM) {
-  const amenities = OSM_AMENITIES[category];
-  if (!amenities) throw new Error(`No OSM amenity mapping for: ${category}`);
+  // Step 1: Get area name from coordinates
+  let areaName = 'delhi';
+  try {
+    const reverseUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=12`;
+    const place = await httpGet(reverseUrl);
+    const addr = place.address || {};
+areaName = addr.suburb || addr.neighbourhood || addr.village || addr.city || 'delhi';
+// Remove "Tehsil" and other administrative terms
+areaName = areaName.replace(/tehsil/gi, '').replace(/district/gi, '').trim();
+    logger.info(`[Nominatim] Area detected: ${areaName}`);
+  } catch(e) {
+    logger.warn(`[Nominatim] Reverse geocode failed: ${e.message}`);
+  }
 
-  /* Build Overpass QL — union of all relevant amenity tags */
-  const blocks = amenities
-    .map((a) => `node["amenity"="${a}"](around:${radiusM},${lat},${lng});`)
-    .join("\n      ");
+  // Step 2: Search using area name
+ const searchTerm = {
+    hospital: `hospital ${areaName}`,
+    police  : `police ${areaName}`,
+   towing: `puncture repair shop ${areaName}`,
+  };
 
-  const query = `[out:json][timeout:10];\n(\n      ${blocks}\n);\nout body;`;
-  const url   = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+  const query = searchTerm[category];
+  const url = `https://nominatim.openstreetmap.org/search?` +
+    `q=${encodeURIComponent(query)}&` +
+    `format=json&limit=15&countrycodes=in`;
 
-  logger.info(`[OSM] category=${category} amenities=[${amenities}] radius=${radiusM}m`);
+  logger.info(`[Nominatim] Searching: '${query}'`);
   const data = await httpGet(url);
 
-  /* Filter to only named places and normalise */
-  return (data.elements || [])
-    .filter((el) => el.tags?.name)
-    .map((el) => normaliseOSM(el, lat, lng, category));
-}
+  if (!Array.isArray(data) || data.length === 0) {
+    throw new Error(`No results for: ${query}`);
+  }
 
+  const results = data
+    .filter(p => p.lat && p.lon)
+    .map(p => {
+      const dist = haversineKm(lat, lng, parseFloat(p.lat), parseFloat(p.lon));
+      return {
+        id          : `nom-${p.place_id}`,
+        name        : p.display_name.split(',')[0],
+        category,
+        address     : p.display_name.split(',').slice(0,3).join(','),
+        lat         : parseFloat(p.lat),
+        lng         : parseFloat(p.lon),
+        distanceKm  : +dist.toFixed(2),
+        distanceStr : dist < 1 ? `${Math.round(dist*1000)} m` : `${dist.toFixed(1)} km`,
+        phone       : null,
+        openingHours: '24×7',
+        source      : 'nominatim',
+      };
+    })
+   .filter(p => p.distanceKm < 20)
+.filter(p => !p.name.toLowerCase().includes('road') && 
+             !p.name.toLowerCase().includes('street') &&
+             !p.name.toLowerCase().includes('marg') &&
+             !p.name.toLowerCase().includes('nagar') &&
+             p.name.length > 3)
+    .sort((a, b) => a.distanceKm - b.distanceKm);
+
+  logger.info(`[OSM] ✓ ${results.length} results for '${category}'`);
+  return results;
+}
 function normaliseOSM(el, userLat, userLng, category) {
   const tags = el.tags || {};
   const dist = haversineKm(userLat, userLng, el.lat, el.lon);

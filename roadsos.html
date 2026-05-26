@@ -1450,7 +1450,8 @@ if (navigator.geolocation) {
   navigator.geolocation.getCurrentPosition(
     pos => {
       window.userLat = pos.coords.latitude;
-      window.userLng = pos.coords.longitude;
+window.userLng = pos.coords.longitude;
+console.log('GPS:', window.userLat, window.userLng);
       console.log('GPS:', window.userLat, window.userLng);
     },
     err => console.log('Location denied')
@@ -1461,6 +1462,28 @@ if (navigator.geolocation) {
    ANIMATED ROAD CANVAS
    Draws moving dashed road lines in the background.
 ════════════════════════════════════════════════════════════ */
+// ── Load real places from backend API ──
+async function loadRealPlaces() {
+  const lat = window.userLat || 28.5562;
+  const lng = window.userLng || 77.2010;
+  console.log('Loading real places for:', lat, lng);
+document.getElementById('place-list').innerHTML = '<div style="padding:20px;color:#5ca8ff;text-align:center;">Loading nearby places...</div>';
+  try {
+    const [h, p, t] = await Promise.all([
+      fetch(`http://localhost:5000/nearest-hospital?lat=${lat}&lng=${lng}&limit=8&radius=5`).then(r=>r.json()),
+      fetch(`http://localhost:5000/nearest-police?lat=${lat}&lng=${lng}&limit=8&radius=10`).then(r=>r.json()),
+      fetch(`http://localhost:5000/nearest-towing?lat=${lat}&lng=${lng}&limit=8&radius=10`).then(r=>r.json()),
+    ]);
+    PLACES.length = 0;
+    (h.results||[]).forEach((x,i) => PLACES.push({ id:i+1,   type:'hospital', name:x.name, lat:x.lat, lng:x.lng, dist:x.distanceStr, open:x.openingHours||'24x7', extra:x.phone||'Call 102' }));
+    (p.results||[]).forEach((x,i) => PLACES.push({ id:i+100, type:'police',   name:x.name, lat:x.lat, lng:x.lng, dist:x.distanceStr, open:x.openingHours||'24x7', extra:x.phone||'Call 100' }));
+    (t.results||[]).forEach((x,i) => PLACES.push({ id:i+200, type:'towing',   name:x.name, lat:x.lat, lng:x.lng, dist:x.distanceStr, open:x.openingHours||'24x7', extra:x.phone||'Call 1033' }));
+    console.log('Real places loaded:', PLACES.length);
+    if (map) renderPlaces();
+  } catch(err) {
+    console.log('loadRealPlaces error:', err.message);
+  }
+}
 
 (function initRoadCanvas() {
   const canvas = document.getElementById('road-canvas');
@@ -1601,19 +1624,8 @@ let mapMarkers = [];
 let activeFilters = { hospital: true, police: true, towing: true };
 
 // Sample emergency locations around New Delhi (real/realistic coords)
-const PLACES = [
-  { id:1, type:'hospital', name:'AIIMS Delhi Trauma Centre', lat:28.5672, lng:77.2100, dist:'0.8 km', open:'24×7', beds:12 },
-  { id:2, type:'hospital', name:'Safdarjung Hospital', lat:28.5680, lng:77.2010, dist:'1.2 km', open:'24×7', beds:8 },
-  { id:3, type:'hospital', name:'RML Hospital Emergency', lat:28.6280, lng:77.2080, dist:'2.1 km', open:'24×7', beds:5 },
-  { id:4, type:'hospital', name:'Apollo Hospital Delhi', lat:28.5490, lng:77.2450, dist:'3.4 km', open:'24×7', beds:15 },
-  { id:5, type:'police',   name:'Hauz Khas Police Station', lat:28.5494, lng:77.2001, dist:'1.0 km', open:'24×7', units:4 },
-  { id:6, type:'police',   name:'Saket Police Station', lat:28.5245, lng:77.2136, dist:'2.8 km', open:'24×7', units:6 },
-  { id:7, type:'police',   name:'Green Park Police Station', lat:28.5580, lng:77.2060, dist:'1.5 km', open:'24×7', units:3 },
-  { id:8, type:'towing',   name:'Delhi Traffic Aid Towing', lat:28.5610, lng:77.1950, dist:'1.1 km', open:'24×7', trucks:3 },
-  { id:9, type:'towing',   name:'NHAI Highway Assist', lat:28.5730, lng:77.2200, dist:'2.0 km', open:'24×7', trucks:2 },
-  { id:10,type:'towing',   name:'QuickTow Delhi', lat:28.5390, lng:77.2300, dist:'3.6 km', open:'24×7', trucks:5 },
-];
-
+// Places array - will be populated with real data from backend
+const PLACES = [];
 // Icon emoji per type
 const TYPE_ICON = { hospital:'🏥', police:'🚓', towing:'🔧' };
 const TYPE_COLOR = { hospital:'#ff2d3b', police:'#1e90ff', towing:'#ffb800' };
@@ -1622,7 +1634,7 @@ function initMap() {
   if (map) return; // already initialised
 
   // Default center: New Delhi
-  const center = [28.5562, 77.2010];
+  const center = [window.userLat || 28.5562, window.userLng || 77.2010];
 
   map = L.map('map', {
     center: center,
@@ -1637,13 +1649,18 @@ function initMap() {
   }).addTo(map);
 
   // User location marker (default)
-  L.circleMarker(center, {
+ if (window.userLat && window.userLng) {
+  L.circleMarker([window.userLat, window.userLng], {
     radius: 10, color: '#00e5d1', fillColor: '#00e5d1',
     fillOpacity: 0.5, weight: 3,
-  }).addTo(map).bindPopup('<strong>📍 Your Location</strong>');
-
+  }).addTo(map).bindPopup('<strong>📍 Your Location</strong>').openPopup();
+}
   // Render all place markers and sidebar list
   renderPlaces();
+
+  // Load real places from backend
+// Load real places after short delay
+  setTimeout(() => loadRealPlaces(), 2000);
 }
 
 function renderPlaces() {
@@ -1947,17 +1964,20 @@ async function sendChat() {
   document.getElementById('chat-messages').scrollTop = 99999;
 
   try {
-    const response = await fetch('http://localhost:5000/chat', {
+    console.log('Sending location:', window.userLat, window.userLng);
+const response = await fetch('http://localhost:5000/chat', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body   : JSON.stringify({ message: text, lat: window.userLat || 28.715, lng: window.userLng || 77.085 })
+      body   : JSON.stringify({ message: text, lat: window.userLat, lng: window.userLng }),
     });
     const data = await response.json();
     document.getElementById('typing-indicator')?.remove();
-  const formatted = data.reply
-  .replace(/\n/g, '<br>')
-  .replace(/\?([0-9])/g, 'Rs.$1')
-  .replace(/\?\?/g, '')
+ const formatted = data.reply
+  .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // **bold**
+  .replace(/\*(.*?)\*/g, '<em>$1</em>')               // *italic*
+  .replace(/\n/g, '<br>')                              // newlines
+  .replace(/\?([0-9])/g, 'Rs.$1')                     // fix rupee symbol
+  .replace(/\?\?/g, '')                                // remove ??
   .trim();
 addMsg(`<div class="msg-bubble">${formatted}</div>`, 'bot');
 

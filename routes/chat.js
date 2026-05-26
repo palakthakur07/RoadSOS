@@ -1,1 +1,58 @@
-﻿const express = require("express"); const router = express.Router(); const https = require("https"); function getFallback(msg) { const m = msg.toLowerCase(); if(m.includes("hospital")||m.includes("trauma")||m.includes("medical")||m.includes("doctor")) return "?? Nearest Hospitals:\n1. AIIMS Delhi - 011-2659-3800 (0.8km)\n2. Safdarjung Hospital - 011-2673-0000 (1.2km)\n3. RML Hospital - 011-2336-5525 (2.1km)\n\nFor ambulance call 102!"; if(m.includes("police")||m.includes("fir")||m.includes("crime")) return "?? Nearest Police Stations:\n1. Hauz Khas PS - 011-2685-3136 (1.0km)\n2. Green Park PS - 011-2686-3588 (1.5km)\n3. Saket PS - 011-2953-7171 (2.8km)\n\nEmergency: Call 100!"; if(m.includes("tow")||m.includes("breakdown")||m.includes("puncture")||m.includes("car broke")) return "?? Towing Services:\n1. NHAI Helpline - 1033 (FREE on highways)\n2. Delhi Traffic Aid - 011-2584-2584\n3. QuickTow - +91-98103-33333\n\nNHAI is free on national highways!"; if(m.includes("ambulance")||m.includes("injured")||m.includes("hurt")||m.includes("accident")) return "?? Emergency Help:\n1. Call 102 - Free Ambulance\n2. CATS Ambulance - +91-98108-48484\n3. National Emergency - 112\n\nStay calm, help is on the way!"; if(m.includes("first aid")||m.includes("bleeding")||m.includes("unconscious")) return "?? First Aid Steps:\n1. Ensure safety - move to safe area\n2. Check breathing - tilt head back\n3. Call 112 immediately\n4. Stop bleeding - apply firm pressure\n5. Do NOT move if spinal injury suspected\n\nCall 102 for ambulance!"; if(m.includes("drunk")||m.includes("dui")||m.includes("alcohol")) return "?? Drunk Driving Law (India):\n- Fine: ?10,000 (1st offence)\n- Fine: ?15,000 (repeat offence)\n- Jail: Up to 6 months\n- License: Suspended minimum 6 months\n- BAC limit: 30mg/100ml blood\n\nSection 185 MV Act 2019"; if(m.includes("traffic law")||m.includes("fine")||m.includes("challan")||m.includes("speed")) return "?? Key Traffic Fines (MV Act 2019):\n- Speeding: ?1,000-?4,000\n- No helmet: ?1,000\n- Red light jump: ?5,000\n- No seatbelt: ?1,000\n- Using mobile: ?1,000-?10,000\n- Drunk driving: ?10,000\n- Hit & run: ?2,00,000"; if(m.includes("pothole")||m.includes("road")||m.includes("hazard")||m.includes("report")) return "?? Report Road Hazard:\n1. NHAI Helpline: 1033\n2. Delhi MCD App: mSewa\n3. potholereport.in\n\nFor immediate danger call 112!"; if(m.includes("hello")||m.includes("hi")||m.includes("hey")) return "?? Hello! I am RoadSoS AI Emergency Assistant!\n\nI can help you with:\n?? Nearest hospitals\n?? Police stations\n?? Ambulance services\n?? Towing services\n?? First aid tips\n?? Traffic laws\n\nWhat do you need help with?"; return "?? I am RoadSoS AI! I can help with:\n\n?? nearest hospital\n?? nearest police station\n?? ambulance service\n?? towing service\n?? first aid tips\n?? traffic laws\n\nFor emergencies always call 112!"; } router.post("/", (req, res) => { const { message } = req.body; const key = process.env.GEMINI_API_KEY; if (!key) return res.json({ success:true, reply:getFallback(message) }); const payload = JSON.stringify({ contents:[{ parts:[{ text:`You are RoadSoS, an emergency road safety AI for India. Help find hospitals, police, towing. Mention 112 for emergencies. Be concise. User: ${message}` }] }] }); const options = { hostname:"generativelanguage.googleapis.com", path:`/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${key}`, method:"POST", headers:{"Content-Type":"application/json"} }; const apiReq = https.request(options, (apiRes) => { let data = ""; apiRes.on("data", chunk => data += chunk); apiRes.on("end", () => { try { const parsed = JSON.parse(data); const reply = parsed.candidates[0].content.parts[0].text; res.json({ success:true, reply }); } catch(e) { res.json({ success:true, reply:getFallback(message) }); } }); }); apiReq.on("error", () => res.json({ success:true, reply:getFallback(message) })); apiReq.write(payload); apiReq.end(); }); module.exports = router;
+﻿const express = require("express");
+const router = express.Router();
+const https = require("https");
+const { fetchNearby } = require("../utils/locationService");
+function getFallback(msg) {
+  const m = msg.toLowerCase();
+  if (m.includes("hospital") || m.includes("trauma")) return "Nearest Hospitals:\n1. AIIMS Delhi - 011-2659-3800\n2. Safdarjung - 011-2673-0000\n3. RML Hospital - 011-2336-5525\n\nCall 102!";
+  if (m.includes("police")) return "Nearest Police:\n1. Hauz Khas PS - 011-2685-3136\n2. Green Park PS - 011-2686-3588\n\nCall 100!";
+  if (m.includes("tow") || m.includes("breakdown")) return "Towing:\n1. NHAI - 1033\n2. Delhi Traffic Aid - 011-2584-2584";
+  if (m.includes("ambulance")) return "Call 102 - Free Ambulance\nEmergency - 112";
+  if (m.includes("first aid") || m.includes("bleeding")) return "First Aid:\n1. Move to safety\n2. Check breathing\n3. Call 112";
+  if (m.includes("drunk")) return "Drunk Driving:\nFine: Rs.10,000\nJail: 6 months";
+  if (m.includes("hi") || m.includes("hello")) return "Hello! RoadSoS AI!\nAsk: nearest hospital, police, towing, first aid, traffic laws";
+  return "Ask me: nearest hospital, police, ambulance, towing.\nEmergency: 112";
+}
+router.post("/", async (req, res) => {
+  const { message, lat, lng } = req.body;
+  const m = message.toLowerCase();
+  const hasLocation = lat && lng;
+  console.log("Chat - lat:", lat, "lng:", lng);
+  try {
+    if (hasLocation) {
+      if (m.includes("hospital") || m.includes("medical") || m.includes("trauma") || m.includes("doctor")) {
+        const data = await fetchNearby(parseFloat(lat), parseFloat(lng), "hospital", { limit: 5, radiusKm: 10 });
+        if (data.results && data.results.length > 0) {
+          const list = data.results.slice(0,5).map((r,i) => (i+1)+". "+r.name+" - "+r.distanceStr+(r.phone?" - "+r.phone:"")).join("\n");
+          return res.json({ success: true, reply: "Nearest Hospitals near you:\n"+list+"\n\nCall 102!" });
+        }
+      }
+      if (m.includes("police") || m.includes("fir")) {
+        const data = await fetchNearby(parseFloat(lat), parseFloat(lng), "police", { limit: 5, radiusKm: 10 });
+        if (data.results && data.results.length > 0) {
+          const list = data.results.slice(0,5).map((r,i) => (i+1)+". "+r.name+" - "+r.distanceStr+(r.phone?" - "+r.phone:"")).join("\n");
+          return res.json({ success: true, reply: "Nearest Police near you:\n"+list+"\n\nCall 100!" });
+        }
+      }
+      if (m.includes("tow") || m.includes("breakdown") || m.includes("puncture")) {
+        const data = await fetchNearby(parseFloat(lat), parseFloat(lng), "towing", { limit: 5, radiusKm: 10 });
+        if (data.results && data.results.length > 0) {
+          const list = data.results.slice(0,5).map((r,i) => (i+1)+". "+r.name+" - "+r.distanceStr+(r.phone?" - "+r.phone:"")).join("\n");
+          return res.json({ success: true, reply: "Nearest Towing near you:\n"+list+"\n\nNHAI free: 1033" });
+        }
+      }
+    }
+  } catch(err) { console.log("Error:", err.message); }
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return res.json({ success: true, reply: getFallback(message) });
+  const payload = JSON.stringify({ contents:[{ parts:[{ text: "You are RoadSoS emergency AI for India. Be concise. User: "+message }] }] });
+  const options = { hostname: "generativelanguage.googleapis.com", path: "/v1beta/models/gemini-2.5-flash:generateContent?key="+key, method: "POST", headers: {"Content-Type":"application/json"} };
+  const apiReq = https.request(options, (apiRes) => {
+    let d = ""; apiRes.on("data", c => d += c);
+    apiRes.on("end", () => { try { const reply = JSON.parse(d).candidates[0].content.parts[0].text; res.json({ success:true, reply }); } catch(e) { res.json({ success:true, reply:getFallback(message) }); } });
+  });
+  apiReq.on("error", () => res.json({ success:true, reply:getFallback(message) }));
+  apiReq.write(payload); apiReq.end();
+});
+
+module.exports = router;

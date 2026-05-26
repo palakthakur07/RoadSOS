@@ -229,6 +229,20 @@ module.exports = {
 
   // ── Towing & Roadside Assistance ─────────────────────────────
   towing: [
+    
+    { 
+      id:"t-001", 
+      name:"NHAI Free Towing Helpline", 
+      category:"towing", 
+      address:"All National Highways, India", 
+      lat:28.715, lng:77.085, 
+      phone:"1033", 
+      emergency:"1033", 
+      openingHours:"24×7", 
+      note:"FREE on national highways" 
+    },
+    // existing entries below...
+
     {
       id         : "fb-t-001",
       name       : "NHAI Highway Assistance (NH-48)",
