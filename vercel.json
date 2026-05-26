@@ -2,22 +2,42 @@
   "version": 2,
   "builds": [
     {
-      "src": "server.js",
-      "use": "@vercel/node"
-    },
-    {
       "src": "roadsos.html",
       "use": "@vercel/static"
+    },
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
+    {
+      "src": "/",
+      "dest": "/roadsos.html"
+    },
     {
       "src": "/roadsos.html",
       "dest": "/roadsos.html"
     },
     {
-      "src": "/(.*)",
-      "dest": "server.js"
+      "src": "/nearest-(.*)",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/chat",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/challans(.*)",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/incidents(.*)",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/health",
+      "dest": "/server.js"
     }
   ]
 }
