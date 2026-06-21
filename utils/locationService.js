@@ -50,7 +50,7 @@ function httpGet(url, extraHeaders = {}) {
     const lib = url.startsWith("https") ? https : http;
     const options = {
       headers: {
-        "User-Agent": "RoadSoS-IITMadras-Hackathon/1.0 (roadsos@iitm.ac.in)",
+        "User-Agent": "RoadSoS-EmergencyPlatform/1.0",
         "Accept"        : "application/json",
         "Accept-Language": "en",
         "Referer"       : "http://localhost:5500",
