@@ -1,402 +1,206 @@
-# 🚨 RoadSoS Backend API
-### IIT Madras Road Safety Hackathon — Emergency Services Platform
+# RoadSoS — Emergency Road Safety Platform
 
-> Real-time emergency location API for trauma centers, police stations, and towing services — powered by OpenStreetMap (free) with optional Google Maps upgrade.
+RoadSoS is an emergency-response web platform built for Indian roads. It helps people
+in a roadside emergency quickly find the nearest hospital, police station, or towing
+service, report road hazards, and get instant access to national emergency helplines —
+all from a single page, with no login required.
 
----
-
-## ⚡ Quick Start (3 commands)
-
-```bash
-# 1. Install dependencies
-npm install
-
-# 2. Configure environment
-cp .env.example .env        # Edit .env — add Google Maps key (optional)
-
-# 3. Start the server
-npm start                   # → http://localhost:5000
-# or with hot-reload:
-npm run dev                 # requires: npm install -g nodemon
-```
+**Live app:** https://road-sos-taupe.vercel.app
 
 ---
 
-## 📁 Project Structure
+## What it does
+
+- **Emergency Map** — live map of nearby hospitals, police stations, and towing
+  services, filterable by category, with distance and contact info for each.
+- **Services tab** — one-tap access to emergency numbers (ambulance, police, NHAI
+  towing, national helplines) with live response-time indicators.
+- **AI Chatbot** — ask in plain language ("nearest hospital", "first aid for bleeding",
+  "drunk driving fine") and get a relevant answer, using live location data where
+  possible and falling back to a Gemini-powered or canned response otherwise.
+- **Incident reporting** — report accidents, potholes, road blocks, flooding, and other
+  hazards by location; reports persist in a real database (see below) and can be
+  listed or looked up by ID.
+- **Traffic fine lookup (challans)** — quick reference for common traffic violation
+  fines in India.
+
+---
+
+## Tech stack
+
+**Frontend:** Single-file HTML/CSS/JS (`roadsos.html`) using Leaflet.js for maps —
+no build step, no framework, deploys as a static file.
+
+**Backend:** Node.js + Express, deployed as Vercel serverless functions.
+
+**Data sources (waterfall, in order):**
+1. Google Maps Places API (optional — only used if `GOOGLE_MAPS_API_KEY` is set)
+2. OpenStreetMap / Nominatim (free, no key required)
+3. Static fallback dataset (`data/fallback.js`) — always available, even offline
+
+**Persistence:** Supabase (Postgres) for incident reports. This is the only stateful
+part of the app — everything else (nearby-place lookups, chat) is computed fresh on
+each request.
+
+**AI chat:** Google Gemini API (optional — falls back to canned responses if
+`GEMINI_API_KEY` is not set).
+
+---
+
+## Project structure
 
 ```
-roadsos-backend/
-│
-├── server.js                    # Main entry point — Express app setup
-│
+.
+├── roadsos.html              # Entire frontend — static, deployed as-is
+├── server.js                  # Express app entry point
+├── vercel.json                 # Vercel build/route config
+├── package.json
 ├── routes/
-│   ├── hospitals.js             # GET /nearest-hospital
-│   ├── police.js                # GET /nearest-police
-│   ├── towing.js                # GET /nearest-towing
-│   ├── challans.js              # GET /challans — fine calculator
-│   └── incidents.js             # POST/GET /incidents
-│
+│   ├── hospitals.js           # GET /nearest-hospital
+│   ├── police.js              # GET /nearest-police
+│   ├── towing.js               # GET /nearest-towing
+│   ├── challans.js             # GET /challans — traffic fine lookup
+│   ├── incidents.js            # POST /incidents/report, GET /incidents, GET /incidents/:id
+│   └── chat.js                  # POST /chat — AI assistant
 ├── middleware/
-│   ├── validateLocation.js      # lat/lng validation for all location routes
-│   ├── requestLogger.js         # Structured request logging + request IDs
-│   └── errorHandler.js          # Global error handler
-│
+│   ├── requestLogger.js        # Adds X-Request-ID + structured request logging
+│   ├── errorHandler.js          # Centralised error response formatting
+│   └── validateLocation.js      # lat/lng/radius/limit validation for nearby-place routes
 ├── utils/
-│   ├── locationService.js       # Core: Google Maps → OSM → fallback logic
-│   └── logger.js                # Winston logger (console + file)
-│
+│   ├── locationService.js       # Google/OSM/fallback waterfall fetcher + Haversine distance
+│   ├── logger.js                 # Winston logger (console-only on Vercel)
+│   └── db.js                      # Supabase client wrapper
 ├── data/
-│   └── fallback.js              # Static emergency data (offline fallback)
-│
-├── logs/                        # Auto-created: app.log, error.log
-├── tests/
-│   └── api.test.js              # Integration tests (no deps)
-│
-├── .env.example                 # Environment variable template
-├── .gitignore
-└── package.json
+│   ├── fallback.js               # Static emergency-location dataset (Delhi region)
+│   └── schema.sql                 # Postgres schema for the incidents table
+└── tests/
+    └── api.test.js                # Manual integration test suite (no framework)
 ```
 
 ---
 
-## 🌐 API Endpoints
+## Setup
 
-### Base URL: `http://localhost:5000`
-
----
-
-### `GET /nearest-hospital`
-
-Returns nearest trauma centers and hospitals sorted by distance.
-
-**Query Parameters:**
-
-| Param    | Type   | Required | Default | Description                   |
-|----------|--------|----------|---------|-------------------------------|
-| `lat`    | number | ✅ Yes   | —       | User latitude                 |
-| `lng`    | number | ✅ Yes   | —       | User longitude                |
-| `limit`  | number | No       | 10      | Max results (1–20)            |
-| `radius` | number | No       | 5       | Search radius in km (max 25)  |
-
-**Example Request:**
-```
-GET /nearest-hospital?lat=28.5672&lng=77.2100&limit=5
-```
-
-**Example Response:**
-```json
-{
-  "success": true,
-  "category": "hospital",
-  "query": { "lat": 28.5672, "lng": 77.21, "radiusKm": 5, "limit": 5 },
-  "meta": {
-    "source": "openstreetmap",
-    "total": 8,
-    "returned": 5,
-    "radiusKm": 5,
-    "queriedAt": "2024-01-15T10:30:00.000Z"
-  },
-  "results": [
-    {
-      "id": "osm-123456",
-      "name": "AIIMS Trauma Centre",
-      "category": "hospital",
-      "address": "Sri Aurobindo Marg, Ansari Nagar, New Delhi",
-      "lat": 28.5672,
-      "lng": 77.21,
-      "distanceKm": 0.12,
-      "distanceStr": "120 m",
-      "phone": "011-2659-3800",
-      "openingHours": "24×7",
-      "source": "openstreetmap"
-    }
-  ]
-}
-```
-
----
-
-### `GET /nearest-police`
-
-Returns nearest police stations sorted by distance.
-
-**Query Parameters:** Same as `/nearest-hospital`
-
-**Example:**
-```
-GET /nearest-police?lat=28.5672&lng=77.2100
-```
-
-**Extra field in response:**
-```json
-{ "emergencyNumber": "100" }
-```
-
----
-
-### `GET /nearest-towing`
-
-Returns nearest towing services, garages, and roadside assistance.
-
-**Query Parameters:** Same as `/nearest-hospital`
-
-**Example:**
-```
-GET /nearest-towing?lat=28.5672&lng=77.2100&radius=10
-```
-
-**Extra field in response:**
-```json
-{ "nhaiFreeHelpline": "1033" }
-```
-
----
-
-### `GET /challans`
-
-Traffic fine calculator based on Motor Vehicles Amendment Act, 2019.
-
-| Param       | Type   | Required | Description                             |
-|-------------|--------|----------|-----------------------------------------|
-| `violation` | string | No       | e.g. `speeding`, `drunk_driving`        |
-| `vehicle`   | string | No       | `car`, `bike`, `truck`, `bus`, `auto`   |
-
-**Without params** → Returns complete fine schedule.
-
-**Violation codes:**
-`speeding` · `drunk_driving` · `no_helmet` · `no_seatbelt` · `red_light`
-`mobile_driving` · `wrong_side` · `no_insurance` · `no_licence` · `hit_run` · `overloading`
-
-**Examples:**
-```
-GET /challans
-GET /challans?violation=drunk_driving
-GET /challans?violation=speeding&vehicle=bike
-```
-
-**Response (with violation + vehicle):**
-```json
-{
-  "success": true,
-  "results": [{
-    "id": "drunk_driving",
-    "label": "Drunk Driving (DUI)",
-    "section": "Section 185 MV Act",
-    "applicableFine": { "first": 10000, "repeat": 15000 },
-    "imprisonment": "6 months (first), 2 years (repeat)",
-    "licenceSuspend": true
-  }]
-}
-```
-
----
-
-### `POST /incidents/report`
-
-Report a road incident (accident, pothole, breakdown, etc.)
-
-**Request Body (JSON):**
-```json
-{
-  "lat": 28.5672,
-  "lng": 77.2100,
-  "type": "accident",
-  "description": "Head-on collision near NH-48 toll plaza, 2 vehicles",
-  "severity": "high",
-  "reporterPhone": "+91-9876543210"
-}
-```
-
-| Field           | Required | Values                                                        |
-|-----------------|----------|---------------------------------------------------------------|
-| `lat`           | ✅       | -90 to 90                                                     |
-| `lng`           | ✅       | -180 to 180                                                   |
-| `type`          | ✅       | `accident` `breakdown` `road_hazard` `pothole` `flood` etc.   |
-| `description`   | ✅       | 5–500 characters                                              |
-| `severity`      | No       | `low` `medium` `high` `critical`                              |
-| `reporterPhone` | No       | Contact number                                                |
-
-**Response 201:**
-```json
-{
-  "success": true,
-  "message": "Incident reported successfully.",
-  "incident": {
-    "id": "a1b2c3d4-...",
-    "type": "accident",
-    "severity": "high",
-    "status": "reported",
-    "reportedAt": "2024-01-15T10:30:00Z"
-  },
-  "helpNumbers": { "emergency": "112", "police": "100" }
-}
-```
-
----
-
-### `GET /incidents`
-
-List recently reported incidents.
-
-```
-GET /incidents?type=accident&severity=high&limit=20
-```
-
-### `GET /incidents/:id`
-
-Fetch a specific incident by UUID.
-
----
-
-### `GET /health`
-
-Server health check — used by monitoring tools.
-
-```json
-{
-  "status": "healthy",
-  "uptime": "3600s",
-  "memory": { "heapUsed": "45 MB", "heapTotal": "70 MB" },
-  "mapsSource": "OpenStreetMap (Overpass API)",
-  "fallbackEnabled": true
-}
-```
-
----
-
-## 🔑 Maps API Configuration
-
-### Option A: No API Key (OpenStreetMap — Default)
-Works out of the box. No signup needed.
-Leave `GOOGLE_MAPS_API_KEY` blank in `.env`.
-
-### Option B: Google Maps (Higher accuracy, more data)
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Enable **Places API (Nearby Search)**
-3. Create an API key
-4. Add to `.env`:
-   ```
-   GOOGLE_MAPS_API_KEY=AIzaSy...yourkey...
-   ```
-
-> The server automatically switches to Google Maps when the key is present.
-
----
-
-## 🛡️ Error Response Format
-
-All errors return a consistent JSON shape:
-
-```json
-{
-  "success": false,
-  "error": "Human-readable error message",
-  "requestId": "uuid-for-tracing",
-  "hint": "Optional guidance"
-}
-```
-
-**HTTP Status Codes:**
-| Code | Meaning                                   |
-|------|-------------------------------------------|
-| 200  | Success                                   |
-| 201  | Created (incident reported)               |
-| 400  | Bad request (invalid/missing params)      |
-| 404  | Endpoint or resource not found            |
-| 429  | Rate limit exceeded                       |
-| 500  | Server error (check logs/)                |
-
----
-
-## 📋 Environment Variables
-
-```env
-PORT=5000                          # Server port
-NODE_ENV=development               # development | production
-
-GOOGLE_MAPS_API_KEY=               # Optional — leave blank for OSM
-
-ALLOWED_ORIGINS=http://localhost:3000   # CORS origins (prod)
-
-DEFAULT_RADIUS_KM=5                # Default search radius
-MAX_RESULTS=15                     # Max results per request
-MAX_RADIUS_KM=25                   # Max allowed radius
-
-LOG_LEVEL=info                     # error|warn|info|http|debug
-LOG_TO_FILE=true                   # Write logs to ./logs/
-```
-
----
-
-## 🧪 Running Tests
+### 1. Install dependencies
 
 ```bash
-# Terminal 1 — start the server
-npm start
+npm install
+```
 
-# Terminal 2 — run tests
+### 2. Configure environment variables
+
+Copy `.env.example` to `.env` and fill in:
+
+```dotenv
+PORT=5000
+NODE_ENV=development
+
+# Required for incident persistence
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret
+
+# Optional — live AI chat replies (falls back to canned responses if unset)
+GEMINI_API_KEY=
+
+# Optional — Tier-1 nearby-place lookups (falls back to OSM, then static data, if unset)
+GOOGLE_MAPS_API_KEY=
+```
+
+**Getting Supabase credentials:**
+1. Create a free project at [supabase.com](https://supabase.com)
+2. Go to **Settings → API** to find your Project URL and `service_role` secret key
+3. Go to **SQL Editor**, paste the contents of `data/schema.sql`, and run it once to
+   create the `incidents` table
+
+> ⚠️ The `service_role` key bypasses Row Level Security. Never expose it to the
+> frontend or commit it to git — it belongs only in `.env` (local) or your hosting
+> provider's environment variable settings (production).
+
+### 3. Run locally
+
+```bash
+npm run dev      # with nodemon (auto-restart on file changes)
+# or
+npm start        # plain node
+```
+
+The API runs on `http://localhost:5000` by default. Open `roadsos.html` directly in a
+browser, or serve it with any static file server.
+
+### 4. Run tests
+
+```bash
 npm test
 ```
 
-Tests cover: root endpoint, health check, all 3 location APIs,
-challan calculator, incident CRUD, validation errors, and 404 handling.
+Requires the server to already be running locally on the configured port.
 
 ---
 
-## 🔗 Connecting to the Frontend
+## Deployment (Vercel)
 
-In your RoadSoS React/HTML frontend:
+This project is configured to deploy as-is via `vercel.json` — the HTML file is
+served statically, and `server.js` runs as a serverless function handling all API
+routes.
 
-```javascript
-const API = "http://localhost:5000";
-
-// Get nearest hospitals
-const res = await fetch(`${API}/nearest-hospital?lat=${lat}&lng=${lng}&limit=5`);
-const data = await res.json();
-console.log(data.results);   // sorted by distance
-
-// Report an incident
-await fetch(`${API}/incidents/report`, {
-  method : "POST",
-  headers: { "Content-Type": "application/json" },
-  body   : JSON.stringify({ lat, lng, type: "accident", description: "..." })
-});
-```
+1. Push to GitHub
+2. Import the repo in Vercel
+3. Add the same environment variables from `.env` into **Vercel → Project →
+   Settings → Environment Variables** (local `.env` files are never read in
+   production)
+4. Deploy — Vercel auto-deploys on every push to the connected branch
 
 ---
 
-## 📡 Data Source Priority
+## API reference (quick)
 
-```
-Request received
-      │
-      ▼
-┌─────────────────────────┐
-│ GOOGLE_MAPS_API_KEY set? │──Yes──▶ Google Maps Places API
-└─────────────────────────┘           (if fails, continue ↓)
-      │ No
-      ▼
-┌──────────────────────────┐
-│ OpenStreetMap Overpass   │──Success──▶ Return results
-│ API (free, no key)       │
-└──────────────────────────┘
-      │ Fails (offline/timeout)
-      ▼
-┌──────────────────────────┐
-│ Static JSON Fallback     │──Always works──▶ Return results
-│ (data/fallback.js)       │
-└──────────────────────────┘
-```
+| Method | Path                     | Description                              |
+|--------|---------------------------|-------------------------------------------|
+| GET    | `/nearest-hospital`        | Nearest hospitals (`?lat=&lng=&radius=&limit=`) |
+| GET    | `/nearest-police`           | Nearest police stations                  |
+| GET    | `/nearest-towing`            | Nearest towing services                  |
+| GET    | `/challans`                  | Traffic fine schedule / lookup            |
+| POST   | `/incidents/report`           | Report a road hazard                     |
+| GET    | `/incidents`                   | List recent incident reports             |
+| GET    | `/incidents/:id`                | Get a single incident by ID              |
+| POST   | `/chat`                          | AI assistant / quick-answer endpoint     |
+| GET    | `/health`                         | Health check                             |
 
 ---
 
-## 🏆 Built For
-**IIT Madras Road Safety Hackathon**
-RoadSoS Project — Emergency Response Platform
+## Known limitations / in progress
 
-Emergency Numbers (India):
-- 🚨 **112** — National Emergency
-- 🚑 **102** — Ambulance
-- 🚓 **100** — Police
-- 🔧 **1033** — NHAI Road Assistance
-- 🚗 **1095** — Traffic Police
+Being upfront about the current state rather than overstating it:
+
+- **Rate limiting is not yet active.** `express-rate-limit` is a dependency and the
+  `.env` has `RATE_LIMIT_GLOBAL` / `RATE_LIMIT_LOCATION` placeholders, but no
+  middleware currently enforces them. Without this, the Gemini API key and
+  OSM/Nominatim usage have no abuse protection.
+- **`requestLogger.js` and `errorHandler.js` exist but are not wired into
+  `server.js` yet.** Once connected, every response will include an `X-Request-ID`
+  header and errors will return a consistent JSON shape.
+- **ETAs shown on the frontend are estimates**, calculated from distance at an
+  assumed ~28 km/h average speed — not real traffic-aware routing times.
+- **No authentication or rate limiting on incident reporting** — currently anyone
+  can submit a report; there's no spam/abuse protection beyond basic field
+  validation.
+
+---
+
+## Emergency numbers (India) referenced in this app
+
+| Service              | Number  |
+|----------------------|---------|
+| National Emergency    | 112    |
+| Ambulance              | 102    |
+| Police                  | 100    |
+| Traffic Police            | 1095  |
+| Women's Helpline            | 1091 |
+| NHAI Highway Assistance      | 1033 |
+| Road Accident Helpline         | 1073 |
+
+---
+
+## License
+
+MIT
