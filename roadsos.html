@@ -7,397 +7,476 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <style>
 :root {
-  --bg0:      #060a0f;
-  --bg1:      #0b1018;
-  --bg2:      #101820;
-  --bg3:      #15202e;
-  --surface:  #192535;
-  --surface2: #1f2f42;
-  --border:   rgba(255,255,255,0.07);
-  --border2:  rgba(255,255,255,0.14);
-  --red:      #ce2d38;
-  --red2:     #9f343b;
-  --red-dim:  rgba(255,45,59,0.15);
-  --amber:    #ffb800;
-  --amber2:   #ffd166;
-  --amber-dim:rgba(255,184,0,0.12);
-  --green:    #00d68f;
-  --green2:   #50fab0;
-  --green-dim:rgba(0,214,143,0.12);
-  --blue:     #1e90ff;
-  --blue2:    #5db3ff;
-  --blue-dim: rgba(30,144,255,0.13);
-  --teal:     #00e5d1;
-  --text:     #eef2f7;
-  --text2:    #7a93b3;
-  --text3:    #3d5470;
-  --radius:   10px;
-  --radius-sm:6px;
-  --font-h:  'Barlow Condensed', sans-serif;
-  --font-b:  'Barlow', sans-serif;
+  /* ── Core palette ── */
+  --ink:       #0B0E14;   /* base background */
+  --ink2:      #10141d;
+  --surface:   #141925;
+  --surface2:  #1A2030;
+  --raised:    #1F2636;
+  --border:    rgba(255,255,255,0.06);
+  --border2:   rgba(255,255,255,0.12);
+
+  /* ── Signal colors (used deliberately, not as ambient glow) ── */
+  --signal:    #E0382C;   /* signal red — emergency/critical only */
+  --signal-dim: rgba(224,56,44,0.13);
+  --highway:   #1C9C63;   /* highway-marker green — available/ok */
+  --highway-dim: rgba(28,156,99,0.13);
+  --caution:   #F5A623;   /* caution amber — warnings */
+  --caution-dim: rgba(245,166,35,0.13);
+  --steel:     #4C7CB8;   /* steel blue — informational/police */
+  --steel-dim: rgba(76,124,184,0.13);
+
+  --text:      #F4F6F9;
+  --text2:     #94A1B8;
+  --text3:     #4D5870;
+
+  --radius:    12px;
+  --radius-sm: 8px;
+
+  --font-display: 'Barlow Condensed', sans-serif;
+  --font-body:    'Inter', sans-serif;
+  --font-mono:    'IBM Plex Mono', monospace;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; font-size: 16px; }
-body { font-family: var(--font-b); background: var(--bg0); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+body {
+  font-family: var(--font-body);
+  background: var(--ink);
+  background-image:
+    radial-gradient(ellipse 800px 500px at 15% -10%, rgba(76,124,184,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 10%, rgba(224,56,44,0.05) 0%, transparent 60%);
+  background-attachment: fixed;
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
 
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: var(--bg0); }
-::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--ink); }
+::-webkit-scrollbar-thumb { background: var(--raised); border-radius: 3px; }
 
-/* SVG Icon base */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+}
+
 .icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .icon svg { display: block; }
 
-#road-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; opacity: 0.18; }
+:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; border-radius: 4px; }
 
-/* HEADER */
-header { position: sticky; top: 0; z-index: 200; background: rgba(6,10,15,0.88); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-bottom: 1px solid var(--border); }
-.header-inner { max-width: 1160px; margin: 0 auto; padding: 0 20px; height: 60px; display: flex; align-items: center; gap: 12px; }
+/* ════════════════════════════════════════════════════
+   HEADER
+   ════════════════════════════════════════════════════ */
+header {
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(11,14,20,0.85);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+.header-inner { max-width: 1240px; margin: 0 auto; padding: 0 24px; height: 64px; display: flex; align-items: center; gap: 14px; }
 
-.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
-.logo-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--red); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 16px rgba(255,45,59,0.5); animation: logoPulse 2.4s ease-in-out infinite; flex-shrink: 0; }
-@keyframes logoPulse { 0%,100% { box-shadow: 0 0 16px rgba(255,45,59,0.5); } 50% { box-shadow: 0 0 32px rgba(255,45,59,0.9); } }
-.logo-text { font-family: var(--font-h); font-weight: 800; font-size: 22px; letter-spacing: 0.04em; color: var(--text); line-height: 1; }
-.logo-text span { color: var(--red); }
-.logo-sub { font-size: 10px; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; line-height: 1; margin-top: 3px; }
+.logo { display: flex; align-items: center; gap: 11px; text-decoration: none; flex-shrink: 0; }
+.logo-icon {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: linear-gradient(155deg, var(--signal) 0%, #a8261d 100%);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 12px rgba(224,56,44,0.35);
+}
+.logo-text { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: 0.01em; color: var(--text); line-height: 1; }
+.logo-text span { color: var(--signal); }
+.logo-sub { font-family: var(--font-mono); font-size: 10px; color: var(--text3); letter-spacing: 0.07em; text-transform: uppercase; line-height: 1; margin-top: 4px; }
 
-nav { display: flex; gap: 4px; margin-left: auto; }
-.nav-btn { padding: 7px 18px; border-radius: 99px; border: none; background: transparent; color: var(--text2); font-family: var(--font-b); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.18s; white-space: nowrap; letter-spacing: 0.01em; display: flex; align-items: center; gap: 7px; }
-.nav-btn:hover { background: var(--surface); color: var(--text); }
-.nav-btn.active { background: var(--red); color: #fff; font-weight: 600; box-shadow: 0 0 14px rgba(255,45,59,0.4); }
+nav { display: flex; gap: 2px; margin-left: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 99px; padding: 4px; }
+.nav-btn {
+  padding: 8px 18px; border-radius: 99px; border: none; background: transparent;
+  color: var(--text2); font-family: var(--font-body); font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: all 0.18s; white-space: nowrap;
+  display: flex; align-items: center; gap: 7px;
+}
+.nav-btn:hover { color: var(--text); }
+.nav-btn.active { background: var(--raised); color: var(--text); font-weight: 600; box-shadow: inset 0 0 0 1px var(--border2); }
 
-.live-pill { display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 99px; border: 1px solid rgba(0,214,143,0.3); background: rgba(0,214,143,0.08); font-size: 12px; font-weight: 600; color: var(--green2); flex-shrink: 0; margin-left: 12px; }
-.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 1.5s ease infinite; }
+.status-pill {
+  display: flex; align-items: center; gap: 7px; padding: 6px 13px; border-radius: 99px;
+  border: 1px solid rgba(28,156,99,0.25); background: var(--highway-dim);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+  color: #4FD89A; flex-shrink: 0; margin-left: 14px;
+}
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--highway); position: relative; }
+.status-dot::after {
+  content: ''; position: absolute; inset: -3px; border-radius: 50%;
+  border: 1px solid var(--highway); animation: statusRing 2s ease-out infinite;
+}
+@keyframes statusRing { 0% { opacity: 0.8; transform: scale(0.6); } 100% { opacity: 0; transform: scale(1.8); } }
 
 .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 6px; margin-left: auto; border: none; background: none; }
 .hamburger span { display: block; width: 22px; height: 2px; background: var(--text2); border-radius: 2px; transition: all 0.2s; }
 
-/* TABS */
 .tab-panel { display: none; }
-.tab-panel.active { display: block; }
+.tab-panel.active { display: block; animation: panelIn 0.35s ease both; }
+@keyframes panelIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-/* HERO */
-#hero { position: relative; min-height: calc(100vh - 60px); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px 80px; overflow: hidden; z-index: 1; }
-#hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 55% 55% at 50% 65%, rgba(255,45,59,0.12) 0%, transparent 65%), radial-gradient(ellipse 35% 30% at 15% 85%, rgba(255,184,0,0.08) 0%, transparent 55%), radial-gradient(ellipse 30% 25% at 85% 20%, rgba(30,144,255,0.08) 0%, transparent 55%); pointer-events: none; }
+/* ════════════════════════════════════════════════════
+   HERO
+   ════════════════════════════════════════════════════ */
+#hero { position: relative; padding: 76px 24px 0; overflow: hidden; }
+.hero-grid {
+  max-width: 1240px; margin: 0 auto;
+  display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 56px; align-items: center;
+  padding-bottom: 64px;
+}
+@media (max-width: 980px) { .hero-grid { grid-template-columns: 1fr; gap: 40px; } }
 
-.hero-beacon { position: relative; width: 120px; height: 120px; margin-bottom: 36px; animation: fadeUp 0.6s ease both; }
-.beacon-core { position: absolute; inset: 50%; transform: translate(-50%,-50%); width: 60px; height: 60px; border-radius: 50%; background: var(--red); display: flex; align-items: center; justify-content: center; z-index: 2; box-shadow: 0 0 30px rgba(255,45,59,0.7); }
-.beacon-ring { position: absolute; inset: 50%; transform: translate(-50%,-50%); border-radius: 50%; border: 2px solid rgba(255,45,59,0.6); animation: beaconExpand 2s ease-out infinite; }
-.beacon-ring:nth-child(2) { animation-delay: 0.65s; }
-.beacon-ring:nth-child(3) { animation-delay: 1.3s; }
-@keyframes beaconExpand { 0% { width: 60px; height: 60px; opacity: 1; border-color: rgba(255,45,59,0.7); } 100% { width: 120px; height: 120px; opacity: 0; border-color: rgba(255,45,59,0); } }
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 11.5px; font-weight: 500; letter-spacing: 0.06em;
+  color: var(--text2); margin-bottom: 20px; padding: 6px 12px;
+  border: 1px solid var(--border2); border-radius: 99px; background: var(--surface);
+  animation: fadeUp 0.6s ease both;
+}
+.hero-eyebrow .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--signal); animation: blink 1.6s ease infinite; }
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-.hero-tag { font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--red2); margin-bottom: 14px; animation: fadeUp 0.6s 0.1s ease both; }
-.hero-title { font-family: var(--font-h); font-size: clamp(2.8rem, 7vw, 5.5rem); font-weight: 900; line-height: 1; text-align: center; letter-spacing: 0.01em; text-transform: uppercase; animation: fadeUp 0.6s 0.15s ease both; }
-.hero-title .hl-r { color: var(--red); text-shadow: 0 0 30px rgba(255,45,59,0.5); }
-.hero-sub { margin-top: 18px; font-size: clamp(1rem, 2.2vw, 1.2rem); color: var(--text2); font-weight: 300; text-align: center; max-width: 560px; line-height: 1.65; animation: fadeUp 0.6s 0.22s ease both; }
+.hero-title {
+  font-family: var(--font-display); font-size: clamp(2.6rem, 5vw, 4.2rem); font-weight: 700;
+  line-height: 1.04; letter-spacing: -0.01em; animation: fadeUp 0.6s 0.08s ease both;
+}
+.hero-title .hl { color: var(--signal); }
 
-.hero-cta { display: flex; gap: 14px; margin-top: 40px; flex-wrap: wrap; justify-content: center; animation: fadeUp 0.6s 0.3s ease both; }
-.cta-primary { display: inline-flex; align-items: center; gap: 9px; padding: 14px 32px; border-radius: 99px; background: var(--red); color: #fff; font-family: var(--font-b); font-size: 16px; font-weight: 600; border: none; cursor: pointer; box-shadow: 0 0 24px rgba(255,45,59,0.5); transition: transform 0.18s, box-shadow 0.18s; }
-.cta-primary:hover { transform: translateY(-3px); box-shadow: 0 0 42px rgba(255,45,59,0.75); }
-.cta-secondary { display: inline-flex; align-items: center; gap: 9px; padding: 14px 28px; border-radius: 99px; background: transparent; color: var(--text); font-family: var(--font-b); font-size: 16px; font-weight: 500; border: 1.5px solid var(--border2); cursor: pointer; transition: border-color 0.18s, color 0.18s; }
-.cta-secondary:hover { border-color: var(--blue2); color: var(--blue2); }
+.hero-sub {
+  margin-top: 20px; font-size: 16px; color: var(--text2); font-weight: 400;
+  max-width: 480px; line-height: 1.65; animation: fadeUp 0.6s 0.16s ease both;
+}
 
-.hero-stats { display: flex; gap: 0; margin-top: 64px; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); overflow: hidden; animation: fadeUp 0.6s 0.38s ease both; flex-wrap: wrap; }
-.hstat { flex: 1; min-width: 130px; padding: 18px 24px; border-right: 1px solid var(--border); text-align: center; }
-.hstat:last-child { border-right: none; }
-.hstat-num { font-family: var(--font-h); font-size: 2rem; font-weight: 800; line-height: 1; }
-.hstat-num.r { color: var(--red); }
-.hstat-num.a { color: var(--amber); }
-.hstat-num.g { color: var(--green); }
-.hstat-num.b { color: var(--blue2); }
-.hstat-label { font-size: 11px; color: var(--text3); margin-top: 5px; letter-spacing: 0.06em; text-transform: uppercase; }
+.hero-cta { display: flex; gap: 12px; margin-top: 32px; flex-wrap: wrap; animation: fadeUp 0.6s 0.24s ease both; }
+.cta-primary {
+  display: inline-flex; align-items: center; gap: 9px; padding: 13px 26px; border-radius: 10px;
+  background: var(--signal); color: #fff; font-family: var(--font-body); font-size: 15px; font-weight: 600;
+  border: none; cursor: pointer; transition: transform 0.16s, box-shadow 0.16s;
+  box-shadow: 0 4px 16px rgba(224,56,44,0.3);
+}
+.cta-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(224,56,44,0.4); }
+.cta-secondary {
+  display: inline-flex; align-items: center; gap: 9px; padding: 13px 24px; border-radius: 10px;
+  background: var(--surface); color: var(--text); font-family: var(--font-body); font-size: 15px; font-weight: 500;
+  border: 1px solid var(--border2); cursor: pointer; transition: border-color 0.16s, background 0.16s;
+}
+.cta-secondary:hover { border-color: var(--steel); background: var(--raised); }
 
-.ticker-wrap { position: absolute; bottom: 0; left: 0; right: 0; overflow: hidden; height: 36px; background: rgba(255,45,59,0.08); border-top: 1px solid rgba(255,45,59,0.2); display: flex; align-items: center; }
-.ticker-track { display: flex; gap: 0; animation: tickerScroll 28s linear infinite; white-space: nowrap; }
-.ticker-item { padding: 0 32px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--red2); display: flex; align-items: center; gap: 8px; }
-.ticker-sep { color: var(--text3); }
-@keyframes tickerScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+.hero-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; margin-top: 44px; background: var(--border); border-radius: var(--radius); overflow: hidden; animation: fadeUp 0.6s 0.32s ease both; max-width: 480px; }
+.hstat { background: var(--surface); padding: 16px 18px; }
+.hstat-num { font-family: var(--font-mono); font-size: 1.5rem; font-weight: 600; line-height: 1; color: var(--text); }
+.hstat-label { font-size: 11px; color: var(--text3); margin-top: 5px; letter-spacing: 0.02em; }
 
-/* SECTIONS */
-.section-wrap { max-width: 1160px; margin: 0 auto; padding: 40px 20px 80px; position: relative; z-index: 1; }
+/* ── Signature element: live dispatch board ── */
+.dispatch-board {
+  background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius);
+  overflow: hidden; animation: fadeUp 0.6s 0.2s ease both;
+  box-shadow: 0 20px 50px -20px rgba(0,0,0,0.6);
+}
+.db-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--raised), var(--surface));
+}
+.db-head-title { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text2); }
+.db-head-time { font-family: var(--font-mono); font-size: 11px; color: var(--text3); }
+.db-rows { padding: 6px; }
+.db-row {
+  display: grid; grid-template-columns: 28px 1fr auto auto; align-items: center; gap: 12px;
+  padding: 13px 14px; border-radius: var(--radius-sm); transition: background 0.15s;
+}
+.db-row:hover { background: var(--raised); }
+.db-row + .db-row { border-top: 1px solid var(--border); }
+.db-type-badge { width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center; }
+.db-type-badge.r { background: var(--signal-dim); color: var(--signal); }
+.db-type-badge.b { background: var(--steel-dim); color: var(--steel); }
+.db-type-badge.a { background: var(--caution-dim); color: var(--caution); }
+.db-name { font-size: 13.5px; font-weight: 500; color: var(--text); }
+.db-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text3); margin-top: 2px; }
+.db-eta { font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--text); text-align: right; }
+.db-eta-label { font-size: 9.5px; color: var(--text3); text-align: right; margin-top: 1px; letter-spacing: 0.03em; text-transform: uppercase; }
+.db-status { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); }
+.db-status.live { background: var(--highway); box-shadow: 0 0 0 0 rgba(28,156,99,0.5); animation: dbPulse 2s ease infinite; }
+@keyframes dbPulse { 0% { box-shadow: 0 0 0 0 rgba(28,156,99,0.5); } 70% { box-shadow: 0 0 0 6px rgba(28,156,99,0); } 100% { box-shadow: 0 0 0 0 rgba(28,156,99,0); } }
+.db-foot { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 8px; color: var(--text3); font-size: 12px; }
+
+/* ── How it works strip ── */
+.flow-strip { max-width: 1240px; margin: 0 auto; padding: 0 24px 80px; }
+.flow-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--border); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+@media (max-width: 760px) { .flow-grid { grid-template-columns: 1fr; } }
+.flow-card { background: var(--surface); padding: 28px 26px; position: relative; }
+.flow-step { font-family: var(--font-mono); font-size: 11px; color: var(--text3); letter-spacing: 0.06em; margin-bottom: 14px; }
+.flow-icon-wrap { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+.flow-card h3 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; letter-spacing: 0.01em; margin-bottom: 8px; }
+.flow-card p { font-size: 13.5px; color: var(--text2); line-height: 1.6; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ════════════════════════════════════════════════════
+   SHARED SECTION UTILITIES
+   ════════════════════════════════════════════════════ */
+.section-wrap { max-width: 1240px; margin: 0 auto; padding: 44px 24px 80px; }
 .section-head { margin-bottom: 28px; }
-.section-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-.section-eyebrow::before { content: ''; display: block; width: 24px; height: 2px; background: var(--red); border-radius: 1px; }
-.section-title { font-family: var(--font-h); font-size: clamp(1.6rem, 3.5vw, 2.4rem); font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.1; }
-.section-title em { font-style: normal; color: var(--red); }
-.section-desc { margin-top: 8px; color: var(--text2); font-size: 15px; font-weight: 300; max-width: 480px; line-height: 1.6; }
+.section-eyebrow { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; }
+.section-title { font-family: var(--font-display); font-size: clamp(1.7rem, 3vw, 2.2rem); font-weight: 700; letter-spacing: -0.01em; line-height: 1.1; }
+.section-title em { font-style: normal; color: var(--signal); }
+.section-desc { margin-top: 8px; color: var(--text2); font-size: 14.5px; max-width: 480px; line-height: 1.6; }
 
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-.grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
-.grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 18px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
 @media(max-width:900px) { .grid-3,.grid-4 { grid-template-columns: repeat(2,1fr); } }
 @media(max-width:600px) { .grid-2,.grid-3,.grid-4 { grid-template-columns: 1fr; } }
 
-/* MAP TAB */
-.map-layout { display: grid; grid-template-columns: 300px 1fr; gap: 18px; min-height: 580px; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+/* ════════════════════════════════════════════════════
+   MAP TAB
+   ════════════════════════════════════════════════════ */
+.map-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; min-height: 580px; }
 @media(max-width:780px) { .map-layout { grid-template-columns: 1fr; } }
-.map-sidebar { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; overflow: hidden; }
+.map-sidebar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; overflow: hidden; }
 .sidebar-top { padding: 16px; border-bottom: 1px solid var(--border); }
-.search-box { display: flex; align-items: center; gap: 10px; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 9px 14px; }
-.search-box input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-family: var(--font-b); font-size: 14px; }
+.search-box { display: flex; align-items: center; gap: 10px; background: var(--ink2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 14px; transition: border-color 0.16s; }
+.search-box:focus-within { border-color: var(--steel); }
+.search-box input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-family: var(--font-body); font-size: 14px; }
 .search-box input::placeholder { color: var(--text3); }
 .search-icon { color: var(--text3); display: flex; align-items: center; }
-.search-btn { padding: 7px 14px; border-radius: var(--radius-sm); background: var(--red); border: none; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 10px; width: 100%; transition: opacity 0.15s; }
-.search-btn:hover { opacity: 0.88; }
-.filter-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-.chip { padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.16s; letter-spacing: 0.02em; display: flex; align-items: center; gap: 5px; }
-.chip.hospital { background: rgba(255,45,59,0.12); color: var(--red2); border-color: rgba(255,45,59,0.25); }
-.chip.police   { background: rgba(30,144,255,0.12); color: var(--blue2); border-color: rgba(30,144,255,0.25); }
-.chip.towing   { background: rgba(255,184,0,0.12); color: var(--amber2); border-color: rgba(255,184,0,0.25); }
-.chip.active   { opacity: 1; }
-.chip:not(.active) { opacity: 0.5; }
+.search-btn { padding: 9px 14px; border-radius: var(--radius-sm); background: var(--raised); border: 1px solid var(--border2); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 10px; width: 100%; transition: background 0.15s, border-color 0.15s; }
+.search-btn:hover { background: var(--surface2); border-color: var(--steel); }
+.filter-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.chip { padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border2); transition: all 0.16s; letter-spacing: 0.01em; display: flex; align-items: center; gap: 5px; background: var(--ink2); color: var(--text3); }
+.chip.active.hospital { background: var(--signal-dim); color: var(--signal); border-color: rgba(224,56,44,0.3); }
+.chip.active.police   { background: var(--steel-dim); color: var(--steel); border-color: rgba(76,124,184,0.3); }
+.chip.active.towing   { background: var(--caution-dim); color: var(--caution); border-color: rgba(245,166,35,0.3); }
 .place-list { flex: 1; overflow-y: auto; }
 .place-item { padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; display: flex; gap: 12px; align-items: flex-start; }
-.place-item:hover { background: var(--surface); }
-.place-item.selected { background: var(--surface2); }
-.place-icon-badge { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.badge-h { background: var(--red-dim); }
-.badge-p { background: var(--blue-dim); }
-.badge-t { background: var(--amber-dim); }
+.place-item:hover { background: var(--raised); }
+.place-item.selected { background: var(--surface2); box-shadow: inset 2px 0 0 var(--steel); }
+.place-icon-badge { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.badge-h { background: var(--signal-dim); color: var(--signal); }
+.badge-p { background: var(--steel-dim); color: var(--steel); }
+.badge-t { background: var(--caution-dim); color: var(--caution); }
 .place-info { flex: 1; min-width: 0; }
 .place-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.place-meta { font-size: 11px; color: var(--text3); display: flex; gap: 8px; }
-.place-dist { font-size: 11px; font-weight: 600; color: var(--green); margin-left: auto; flex-shrink: 0; }
+.place-meta { font-family: var(--font-mono); font-size: 10.5px; color: var(--text3); display: flex; gap: 8px; }
+.place-dist { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--highway); margin-left: auto; flex-shrink: 0; }
 #map { border-radius: var(--radius); border: 1px solid var(--border); min-height: 500px; z-index: 10; }
-.leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution { filter: invert(0.88) hue-rotate(188deg) brightness(0.9) saturate(1.2); }
-.map-info-bar { margin-top: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 13px; color: var(--text2); display: flex; align-items: center; gap: 10px; }
+.leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution { filter: invert(0.9) hue-rotate(190deg) brightness(0.95) saturate(0.6) contrast(0.9); }
+.map-info-bar { margin-top: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 12.5px; color: var(--text2); display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .info-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.info-dot.r { background: var(--red); box-shadow: 0 0 8px var(--red); }
-.info-dot.b { background: var(--blue); box-shadow: 0 0 8px var(--blue); }
-.info-dot.a { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+.info-dot.r { background: var(--signal); }
+.info-dot.b { background: var(--steel); }
+.info-dot.a { background: var(--caution); }
 
-/* SERVICES */
-.service-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 22px; cursor: pointer; transition: transform 0.22s, box-shadow 0.22s, border-color 0.22s; position: relative; overflow: hidden; }
-.service-card::before { pointer-events: none; content: ''; position: absolute; inset: 0; border-radius: inherit; opacity: 0; transition: opacity 0.22s; }
-.service-card:hover { transform: translateY(-4px); }
-.service-card.red { animation: glowPulseR 3s ease-in-out infinite; }
-.service-card.red::before { background: radial-gradient(circle at 30% 20%, rgba(255,45,59,0.1) 0%, transparent 65%); }
-.service-card.red:hover { border-color: var(--red); box-shadow: 0 0 28px rgba(255,45,59,0.28); }
-.service-card.red::before { opacity: 1; }
-.service-card.blue { animation: glowPulseB 3.4s ease-in-out infinite; }
-.service-card.blue:hover { border-color: var(--blue); box-shadow: 0 0 28px rgba(30,144,255,0.28); }
-.service-card.amber { animation: glowPulseA 3.2s ease-in-out infinite; }
-.service-card.amber:hover { border-color: var(--amber); box-shadow: 0 0 28px rgba(255,184,0,0.28); }
-.service-card.teal:hover { border-color: var(--teal); box-shadow: 0 0 28px rgba(0,229,209,0.25); }
-@keyframes glowPulseR { 0%,100% { box-shadow: 0 0 0 rgba(255,45,59,0); } 50% { box-shadow: 0 0 20px rgba(255,45,59,0.22); } }
-@keyframes glowPulseB { 0%,100% { box-shadow: 0 0 0 rgba(30,144,255,0); } 50% { box-shadow: 0 0 20px rgba(30,144,255,0.22); } }
-@keyframes glowPulseA { 0%,100% { box-shadow: 0 0 0 rgba(255,184,0,0); } 50% { box-shadow: 0 0 20px rgba(255,184,0,0.22); } }
-.svc-icon { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin-bottom: 18px; position: relative; }
-.svc-icon.r { background: var(--red-dim); }
-.svc-icon.b { background: var(--blue-dim); }
-.svc-icon.a { background: var(--amber-dim); }
-.svc-icon.g { background: var(--green-dim); }
-.svc-icon .icon-ping { position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; border-radius: 50%; animation: iconPing 1.8s ease infinite; }
-.icon-ping.r { background: var(--red); box-shadow: 0 0 8px var(--red); }
-.icon-ping.b { background: var(--blue); box-shadow: 0 0 8px var(--blue); }
-.icon-ping.a { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
-.icon-ping.g { background: var(--green); box-shadow: 0 0 8px var(--green); }
-@keyframes iconPing { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.35); opacity: 0.7; } }
-.svc-title { font-family: var(--font-h); font-size: 1.25rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 6px; }
-.svc-title.r { color: var(--red2); }
-.svc-title.b { color: var(--blue2); }
-.svc-title.a { color: var(--amber2); }
-.svc-title.g { color: var(--green2); }
-.svc-desc { font-size: 13px; color: var(--text2); line-height: 1.55; margin-bottom: 18px; font-weight: 300; }
-.svc-nums { display: flex; flex-direction: column; gap: 8px; }
-.svc-num-row { display: flex; align-items: center; justify-content: space-between; background: var(--bg3); border-radius: var(--radius-sm); padding: 9px 12px; border: 1px solid var(--border); cursor: pointer; transition: border-color 0.15s; }
-.svc-num-row:hover { border-color: var(--border2); }
-.svc-num-label { font-size: 12px; color: var(--text2); }
-.svc-num-val { font-size: 14px; font-weight: 700; letter-spacing: 0.05em; }
-.svc-num-val.r { color: var(--red2); }
-.svc-num-val.b { color: var(--blue2); }
-.svc-num-val.a { color: var(--amber2); }
-.svc-num-val.g { color: var(--green2); }
-.call-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 11px; border-radius: var(--radius-sm); border: none; font-family: var(--font-b); font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 14px; transition: opacity 0.15s, transform 0.15s; letter-spacing: 0.02em; }
-.call-btn:hover { opacity: 0.88; transform: scale(0.98); }
-.call-btn.r { background: var(--red); color: #fff; box-shadow: 0 0 14px rgba(255,45,59,0.35); }
-.call-btn.b { background: var(--blue); color: #fff; box-shadow: 0 0 14px rgba(30,144,255,0.35); }
-.call-btn.a { background: var(--amber); color: #060a0f; box-shadow: 0 0 14px rgba(255,184,0,0.35); }
-.call-btn.g { background: var(--green); color: #060a0f; box-shadow: 0 0 14px rgba(0,214,143,0.35); }
-.resp-bar-wrap { margin-top: 12px; }
-.resp-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text3); margin-bottom: 5px; }
-.resp-track { height: 5px; background: var(--bg0); border-radius: 99px; overflow: hidden; }
-.resp-fill { height: 100%; border-radius: 99px; transition: width 1.4s cubic-bezier(0.4,0,0.2,1); }
-.resp-fill.r { background: linear-gradient(90deg, var(--red), var(--red2)); }
-.resp-fill.b { background: linear-gradient(90deg, var(--blue), var(--blue2)); }
-.resp-fill.a { background: linear-gradient(90deg, var(--amber), var(--amber2)); }
+/* ════════════════════════════════════════════════════
+   SERVICES TAB
+   ════════════════════════════════════════════════════ */
+.service-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 26px 24px; transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.service-card:hover { transform: translateY(-3px); box-shadow: 0 16px 32px -16px rgba(0,0,0,0.5); }
+.service-card.red:hover   { border-color: rgba(224,56,44,0.4); }
+.service-card.blue:hover  { border-color: rgba(76,124,184,0.4); }
+.service-card.amber:hover { border-color: rgba(245,166,35,0.4); }
+.service-card.teal:hover  { border-color: rgba(28,156,99,0.4); }
 
-/* CHATBOT */
-.chat-layout { display: grid; grid-template-columns: 1fr 300px; gap: 18px; }
+.svc-icon { width: 48px; height: 48px; border-radius: 11px; display: flex; align-items: center; justify-content: center; margin-bottom: 18px; position: relative; }
+.svc-icon.r { background: var(--signal-dim); color: var(--signal); }
+.svc-icon.b { background: var(--steel-dim); color: var(--steel); }
+.svc-icon.a { background: var(--caution-dim); color: var(--caution); }
+.svc-icon.g { background: var(--highway-dim); color: var(--highway); }
+.svc-icon .icon-ping { position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%; }
+.icon-ping.r { background: var(--signal); box-shadow: 0 0 0 2px var(--surface); }
+.icon-ping.b { background: var(--steel); box-shadow: 0 0 0 2px var(--surface); }
+.icon-ping.a { background: var(--caution); box-shadow: 0 0 0 2px var(--surface); }
+.icon-ping.g { background: var(--highway); box-shadow: 0 0 0 2px var(--surface); animation: dbPulse 2s ease infinite; }
+
+.svc-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; letter-spacing: 0.01em; margin-bottom: 6px; }
+.svc-title.r { color: #ff6b5e; }
+.svc-title.b { color: #8ab4e8; }
+.svc-title.a { color: var(--caution); }
+.svc-title.g { color: #4FD89A; }
+.svc-desc { font-size: 13px; color: var(--text2); line-height: 1.55; margin-bottom: 18px; }
+.svc-nums { display: flex; flex-direction: column; gap: 7px; }
+.svc-num-row { display: flex; align-items: center; justify-content: space-between; background: var(--ink2); border-radius: var(--radius-sm); padding: 10px 13px; border: 1px solid var(--border); cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.svc-num-row:hover { border-color: var(--border2); background: var(--raised); }
+.svc-num-label { font-size: 12.5px; color: var(--text2); }
+.svc-num-val { font-family: var(--font-mono); font-size: 13px; font-weight: 600; letter-spacing: 0.02em; }
+.svc-num-val.r { color: #ff6b5e; }
+.svc-num-val.b { color: #8ab4e8; }
+.svc-num-val.a { color: var(--caution); }
+.svc-num-val.g { color: #4FD89A; }
+.call-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; border-radius: var(--radius-sm); border: none; font-family: var(--font-body); font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 16px; transition: filter 0.15s, transform 0.15s; letter-spacing: 0.01em; }
+.call-btn:hover { filter: brightness(1.1); transform: scale(0.99); }
+.call-btn.r { background: var(--signal); color: #fff; }
+.call-btn.b { background: var(--steel); color: #fff; }
+.call-btn.a { background: var(--caution); color: #0B0E14; }
+.call-btn.g { background: var(--highway); color: #0B0E14; }
+.resp-bar-wrap { margin-top: 14px; }
+.resp-label { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 10.5px; color: var(--text3); margin-bottom: 6px; }
+.resp-track { height: 4px; background: var(--ink2); border-radius: 99px; overflow: hidden; }
+.resp-fill { height: 100%; border-radius: 99px; transition: width 1.2s cubic-bezier(0.4,0,0.2,1); }
+.resp-fill.r { background: var(--signal); }
+.resp-fill.b { background: var(--steel); }
+.resp-fill.a { background: var(--caution); }
+
+/* Availability strip */
+.avail-strip { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 26px; }
+.avail-strip-head { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); margin-bottom: 16px; }
+.avail-num { font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; line-height: 1; }
+.avail-label { font-family: var(--font-mono); font-size: 10.5px; color: var(--text3); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+
+/* ════════════════════════════════════════════════════
+   CHATBOT TAB
+   ════════════════════════════════════════════════════ */
+.chat-layout { display: grid; grid-template-columns: 1fr 290px; gap: 16px; }
 @media(max-width:800px) { .chat-layout { grid-template-columns: 1fr; } }
-.chat-window { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; height: 560px; overflow: hidden; }
-.chat-topbar { padding: 14px 18px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; gap: 12px; }
-.bot-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--red), var(--amber)); display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 14px rgba(255,45,59,0.4); }
+.chat-window { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; height: 560px; overflow: hidden; }
+.chat-topbar { padding: 14px 18px; border-bottom: 1px solid var(--border); background: var(--raised); display: flex; align-items: center; gap: 12px; }
+.bot-avatar { width: 36px; height: 36px; border-radius: 10px; background: var(--steel-dim); color: var(--steel); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .bot-name { font-weight: 600; font-size: 14px; }
-.bot-status { font-size: 11px; color: var(--green); }
-.typing-anim { display: flex; gap: 3px; align-items: center; padding: 8px 14px; background: var(--surface2); border-radius: 12px; border-bottom-left-radius: 3px; width: fit-content; }
+.bot-status { font-family: var(--font-mono); font-size: 10.5px; color: var(--highway); }
+.typing-anim { display: flex; gap: 3px; align-items: center; padding: 10px 14px; background: var(--raised); border-radius: 12px; border-bottom-left-radius: 3px; width: fit-content; }
 .typing-anim span { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); animation: typeBounce 1.2s ease infinite; }
 .typing-anim span:nth-child(2) { animation-delay: 0.18s; }
 .typing-anim span:nth-child(3) { animation-delay: 0.36s; }
 @keyframes typeBounce { 0%,100% { transform: translateY(0); background: var(--text3); } 50% { transform: translateY(-5px); background: var(--text2); } }
-.chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
 .msg { display: flex; gap: 9px; max-width: 88%; animation: msgSlide 0.28s ease both; }
 .msg.user { align-self: flex-end; flex-direction: row-reverse; }
 @keyframes msgSlide { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-.msg-bubble { padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.55; }
-.msg.bot .msg-bubble { background: var(--surface2); border-bottom-left-radius: 3px; color: var(--text); }
-.msg.user .msg-bubble { background: var(--red); border-bottom-right-radius: 3px; color: #fff; }
-.msg-avatar { font-size: 20px; flex-shrink: 0; margin-top: 2px; display: flex; align-items: flex-start; }
-.chat-card { background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 8px; }
-.chat-card-header { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
-.chat-card-row { display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid var(--border); color: var(--text2); }
-.chat-card-row:last-child { border-bottom: none; }
-.chat-card-row .val { color: var(--text); font-weight: 500; }
-.chat-input-bar { padding: 12px 14px; border-top: 1px solid var(--border); background: var(--surface); display: flex; gap: 10px; }
-.chat-input { flex: 1; background: var(--bg2); border: 1px solid var(--border2); border-radius: 99px; padding: 10px 18px; color: var(--text); font-family: var(--font-b); font-size: 14px; outline: none; transition: border-color 0.16s; }
-.chat-input:focus { border-color: var(--red); }
-.send-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--red); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 0 12px rgba(255,45,59,0.35); }
-.send-btn:hover { transform: scale(1.1); box-shadow: 0 0 22px rgba(255,45,59,0.6); }
-.quick-prompts { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
-.qp-title { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 12px; }
-.qp-list { display: flex; flex-direction: column; gap: 8px; }
-.qp-item { padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; color: var(--text2); cursor: pointer; transition: all 0.16s; display: flex; align-items: center; gap: 8px; }
-.qp-item:hover { background: var(--surface2); border-color: var(--border2); color: var(--text); }
-.qp-icon { display: flex; align-items: center; flex-shrink: 0; }
+.msg-bubble { padding: 11px 15px; border-radius: 14px; font-size: 14px; line-height: 1.55; }
+.msg.bot .msg-bubble { background: var(--raised); border-bottom-left-radius: 3px; color: var(--text); border: 1px solid var(--border); }
+.msg.user .msg-bubble { background: var(--steel); border-bottom-right-radius: 3px; color: #fff; }
+.msg-avatar { width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; background: var(--ink2); color: var(--text2); }
+.msg.user .msg-avatar { background: var(--steel-dim); color: var(--steel); }
+.chat-input-bar { padding: 14px; border-top: 1px solid var(--border); background: var(--raised); display: flex; gap: 10px; }
+.chat-input { flex: 1; background: var(--ink2); border: 1px solid var(--border2); border-radius: 99px; padding: 11px 18px; color: var(--text); font-family: var(--font-body); font-size: 14px; outline: none; transition: border-color 0.16s; }
+.chat-input:focus { border-color: var(--steel); }
+.send-btn { width: 42px; height: 42px; border-radius: 50%; background: var(--signal); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: filter 0.15s, transform 0.15s; }
+.send-btn:hover { filter: brightness(1.1); transform: scale(1.05); }
+.quick-prompts { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+.qp-title { font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text3); margin-bottom: 12px; }
+.qp-list { display: flex; flex-direction: column; gap: 7px; }
+.qp-item { padding: 10px 13px; background: var(--ink2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; color: var(--text2); cursor: pointer; transition: all 0.16s; display: flex; align-items: center; gap: 9px; }
+.qp-item:hover { background: var(--raised); border-color: var(--border2); color: var(--text); }
+.qp-icon { display: flex; align-items: center; flex-shrink: 0; color: var(--text3); }
 
-/* FOOTER */
-footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 28px 20px; position: relative; z-index: 1; }
-.footer-inner { max-width: 1160px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-.footer-copy { font-size: 13px; color: var(--text3); line-height: 1.6; }
-.footer-copy strong { color: var(--text2); font-weight: 500; }
-.footer-badge { display: flex; align-items: center; gap: 8px; padding: 7px 16px; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; letter-spacing: 0.05em; color: var(--text2); }
+.emg-strip { margin-top: 18px; padding: 16px; background: var(--signal-dim); border: 1px solid rgba(224,56,44,0.25); border-radius: var(--radius-sm); }
+.emg-strip-head { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--signal); margin-bottom: 10px; letter-spacing: 0.04em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
+.emg-call-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: var(--signal); color: #fff; border-radius: var(--radius-sm); text-decoration: none; font-weight: 700; font-size: 19px; letter-spacing: 0.05em; margin-bottom: 6px; font-family: var(--font-display); }
+.emg-strip-sub { font-size: 11px; color: var(--text3); text-align: center; }
 
-/* ANIMATIONS */
-@keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.2); } }
+/* ════════════════════════════════════════════════════
+   FOOTER
+   ════════════════════════════════════════════════════ */
+footer { border-top: 1px solid var(--border); background: var(--ink2); padding: 32px 24px; }
+.footer-inner { max-width: 1240px; margin: 0 auto; display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.footer-copy { font-size: 13px; color: var(--text3); line-height: 1.7; max-width: 640px; }
+.footer-copy strong { color: var(--text2); font-weight: 600; }
+.footer-badge { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; letter-spacing: 0.03em; color: var(--text2); white-space: nowrap; }
 
-/* RESPONSIVE */
+/* ════════════════════════════════════════════════════
+   RESPONSIVE
+   ════════════════════════════════════════════════════ */
 @media(max-width:680px) {
   .header-inner { gap: 8px; }
   nav { display: none; }
-  nav.open { display: flex; flex-direction: column; position: fixed; top: 60px; left: 0; right: 0; background: var(--bg1); border-bottom: 1px solid var(--border); padding: 10px; z-index: 199; gap: 4px; }
+  nav.open { display: flex; flex-direction: column; position: fixed; top: 64px; left: 16px; right: 16px; background: var(--surface); border: 1px solid var(--border2); padding: 8px; z-index: 199; gap: 2px; border-radius: var(--radius); }
   .nav-btn { width: 100%; border-radius: var(--radius-sm); text-align: left; }
   .hamburger { display: flex; }
-  .live-pill { display: none; }
-  .hero-stats { flex-direction: column; }
-  .hstat { border-right: none; border-bottom: 1px solid var(--border); }
-  .hstat:last-child { border-bottom: none; }
+  .status-pill { display: none; }
 }
 
 .mt-24 { margin-top: 24px; }
 .mt-32 { margin-top: 32px; }
-.flex-between { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 </style>
 
 <!-- ── SVG ICON LIBRARY ── -->
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
-  <!-- SOS / Shield cross -->
   <symbol id="ic-sos" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M12 2L2 7v6c0 5.25 4.31 10.15 10 11.35C17.69 23.15 22 18.25 22 13V7L12 2z"/>
     <line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/>
   </symbol>
-  <!-- Home -->
   <symbol id="ic-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
   </symbol>
-  <!-- Map -->
   <symbol id="ic-map" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
   </symbol>
-  <!-- Ambulance / Cross -->
   <symbol id="ic-ambulance" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/><line x1="6" y1="7" x2="6" y2="11"/><line x1="4" y1="9" x2="8" y2="9"/>
   </symbol>
-  <!-- Bot / AI -->
   <symbol id="ic-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/>
   </symbol>
-  <!-- Pin / Location -->
   <symbol id="ic-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
   </symbol>
-  <!-- Search -->
   <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
   </symbol>
-  <!-- Hospital -->
   <symbol id="ic-hospital" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/>
   </symbol>
-  <!-- Police / Shield -->
   <symbol id="ic-police" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
   </symbol>
-  <!-- Towing / Wrench -->
   <symbol id="ic-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
   </symbol>
-  <!-- Phone -->
   <symbol id="ic-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.44 2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9A16 16 0 0 0 15 16.09l1.8-1.8a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
   </symbol>
-  <!-- Warning / Alert Triangle -->
   <symbol id="ic-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
   </symbol>
-  <!-- First Aid -->
   <symbol id="ic-firstaid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
   </symbol>
-  <!-- Law / Gavel -->
   <symbol id="ic-law" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
   </symbol>
-  <!-- Clipboard / Steps -->
   <symbol id="ic-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
   </symbol>
-  <!-- Send Arrow -->
   <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
   </symbol>
-  <!-- Detect / Radar -->
   <symbol id="ic-detect" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>
   </symbol>
-  <!-- Locate -->
   <symbol id="ic-locate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
   </symbol>
-  <!-- Respond / Siren -->
   <symbol id="ic-siren" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
   </symbol>
-  <!-- Clock -->
   <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
   </symbol>
-  <!-- User -->
   <symbol id="ic-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
   </symbol>
-  <!-- Helpline / Headset -->
   <symbol id="ic-headset" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
   </symbol>
-  <!-- Menu (hamburger) -->
-  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
-  </symbol>
-  <!-- Services / Grid -->
   <symbol id="ic-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
   </symbol>
-  <!-- Truck (towing) -->
   <symbol id="ic-truck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
   </symbol>
@@ -406,14 +485,12 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
 </head>
 <body>
 
-<canvas id="road-canvas"></canvas>
-
 <!-- HEADER -->
 <header>
   <div class="header-inner">
     <a class="logo" href="#">
       <div class="logo-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
           <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
       </div>
@@ -438,8 +515,8 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
       </button>
     </nav>
 
-    <div class="live-pill">
-      <span class="live-dot"></span>
+    <div class="status-pill">
+      <span class="status-dot"></span>
       LIVE
     </div>
 
@@ -452,159 +529,113 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
 <!-- TAB: HOME -->
 <div id="tab-home" class="tab-panel active">
   <section id="hero">
-    <div class="hero-beacon" aria-hidden="true">
-      <div class="beacon-ring"></div>
-      <div class="beacon-ring"></div>
-      <div class="beacon-ring"></div>
-      <div class="beacon-core">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
-          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
+    <div class="hero-grid">
+      <div>
+        <div class="hero-eyebrow"><span class="dot"></span> EMERGENCY RESPONSE PLATFORM</div>
+        <h1 class="hero-title">Help finds you<br/>before you<br/>have to <span class="hl">find help.</span></h1>
+        <p class="hero-sub">
+          Real-time routing to the nearest trauma centers, police stations, and towing
+          services — built for the moments when every second counts.
+        </p>
+        <div class="hero-cta">
+          <button class="cta-primary" onclick="switchTab('map', document.querySelectorAll('.nav-btn')[1])">
+            <svg width="16" height="16" viewBox="0 0 24 24"><use href="#ic-sos" stroke="white"/></svg>
+            Find Help Now
+          </button>
+          <button class="cta-secondary" onclick="switchTab('services', document.querySelectorAll('.nav-btn')[2])">
+            <svg width="16" height="16" viewBox="0 0 24 24"><use href="#ic-grid" stroke="currentColor"/></svg>
+            View Services
+          </button>
+        </div>
+
+        <div class="hero-stats">
+          <div class="hstat">
+            <div class="hstat-num" id="counter-incidents">0</div>
+            <div class="hstat-label">Incidents Tracked</div>
+          </div>
+          <div class="hstat">
+            <div class="hstat-num" id="counter-centers">0</div>
+            <div class="hstat-label">Trauma Centers</div>
+          </div>
+          <div class="hstat">
+            <div class="hstat-num">6 min</div>
+            <div class="hstat-label">Avg Response</div>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <p class="hero-tag">Emergency Response Platform</p>
-
-    <h1 class="hero-title">
-      <span class="hl-r">Road</span>SoS<br/>
-      <span style="font-size:0.55em; letter-spacing:0.18em; color:var(--text2);">EMERGENCY RESPONSE PLATFORM</span>
-    </h1>
-
-    <p class="hero-sub">
-      Real-time emergency assistance, nearest trauma centers, police stations,
-      and towing services — all in one intelligent platform.
-    </p>
-
-    <div class="hero-cta">
-      <button class="cta-primary" onclick="switchTab('map', document.querySelectorAll('.nav-btn')[1])">
-        <svg width="16" height="16" viewBox="0 0 24 24"><use href="#ic-sos" stroke="white"/></svg>
-        Find Help Now
-      </button>
-      <button class="cta-secondary" onclick="switchTab('services', document.querySelectorAll('.nav-btn')[2])">
-        <svg width="16" height="16" viewBox="0 0 24 24"><use href="#ic-grid" stroke="currentColor"/></svg>
-        View Services
-      </button>
-    </div>
-
-    <div class="hero-stats">
-      <div class="hstat">
-        <div class="hstat-num r" id="counter-incidents">0</div>
-        <div class="hstat-label">Incidents Tracked</div>
-      </div>
-      <div class="hstat">
-        <div class="hstat-num a" id="counter-centers">0</div>
-        <div class="hstat-label">Trauma Centers</div>
-      </div>
-      <div class="hstat">
-        <div class="hstat-num g" id="counter-saved">0</div>
-        <div class="hstat-label">Lives Supported</div>
-      </div>
-      <div class="hstat">
-        <div class="hstat-num b">6 min</div>
-        <div class="hstat-label">Avg Response Time</div>
-      </div>
-    </div>
-
-    <div class="ticker-wrap" aria-live="polite">
-      <div class="ticker-track" id="ticker">
-        <span class="ticker-item">
-          <svg width="12" height="12" viewBox="0 0 24 24"><use href="#ic-alert" stroke="currentColor"/></svg>
-          NCRB 2022: 4.6 LAKH ROAD ACCIDENTS IN INDIA
-        </span>
-        <span class="ticker-sep"> ◆ </span>
-        <span class="ticker-item">
-          <svg width="12" height="12" viewBox="0 0 24 24"><use href="#ic-hospital" stroke="currentColor"/></svg>
-          AIIMS Delhi — 3 beds available
-        </span>
-        <span class="ticker-sep"> ◆ </span>
-        <span class="ticker-item">
-          <svg width="12" height="12" viewBox="0 0 24 24"><use href="#ic-police" stroke="currentColor"/></svg>
-          Police patrol active — Ring Road
-        </span>
-        <span class="ticker-sep"> ◆ </span>
-        <span class="ticker-item">
-          <svg width="12" height="12" viewBox="0 0 24 24"><use href="#ic-alert" stroke="currentColor"/></svg>
-          Road closure — Outer Ring Road
-        </span>
-        <span class="ticker-sep"> ◆ </span>
-        <span class="ticker-item">
-          <svg width="12" height="12" viewBox="0 0 24 24"><use href="#ic-ambulance" stroke="currentColor"/></svg>
-          Ambulance dispatched — Sector 15
-        </span>
-        <span class="ticker-sep"> ◆ </span>
-        <span class="ticker-item">
-          <svg width="12" height="12" viewBox="0 0 24 24"><use href="#ic-alert" stroke="currentColor"/></svg>
-          Fog alert — Yamuna Expressway
-        </span>
-        <span class="ticker-sep"> ◆ </span>
-        <!-- duplicate for seamless loop -->
-        <span class="ticker-item">
-          <svg width="12" height="12" viewBox="0 0 24 24"><use href="#ic-alert" stroke="currentColor"/></svg>
-          NCRB 2022: 4.6 LAKH ROAD ACCIDENTS IN INDIA
-        </span>
-        <span class="ticker-sep"> ◆ </span>
-        <span class="ticker-item">
-          <svg width="12" height="12" viewBox="0 0 24 24"><use href="#ic-hospital" stroke="currentColor"/></svg>
-          AIIMS Delhi — 3 beds available
-        </span>
-        <span class="ticker-sep"> ◆ </span>
-        <span class="ticker-item">
-          <svg width="12" height="12" viewBox="0 0 24 24"><use href="#ic-police" stroke="currentColor"/></svg>
-          Police patrol active — Ring Road
-        </span>
-        <span class="ticker-sep"> ◆ </span>
-        <span class="ticker-item">
-          <svg width="12" height="12" viewBox="0 0 24 24"><use href="#ic-alert" stroke="currentColor"/></svg>
-          Road closure — Outer Ring Road
-        </span>
-        <span class="ticker-sep"> ◆ </span>
-        <span class="ticker-item">
-          <svg width="12" height="12" viewBox="0 0 24 24"><use href="#ic-ambulance" stroke="currentColor"/></svg>
-          Ambulance dispatched — Sector 15
-        </span>
-        <span class="ticker-sep"> ◆ </span>
-        <span class="ticker-item">
-          <svg width="12" height="12" viewBox="0 0 24 24"><use href="#ic-alert" stroke="currentColor"/></svg>
-          Fog alert — Yamuna Expressway
-        </span>
-        <span class="ticker-sep"> ◆ </span>
+      <div class="dispatch-board">
+        <div class="db-head">
+          <span class="db-head-title">Live Dispatch — Near You</span>
+          <span class="db-head-time" id="db-time">--:--:--</span>
+        </div>
+        <div class="db-rows" id="db-rows">
+          <div class="db-row" data-type="hospital">
+            <span class="db-type-badge r"><svg width="14" height="14" viewBox="0 0 24 24"><use href="#ic-hospital" stroke="currentColor"/></svg></span>
+            <div>
+              <div class="db-name">Locating nearest hospital…</div>
+              <div class="db-meta">—</div>
+            </div>
+            <div><div class="db-eta">--:--</div><div class="db-eta-label">min away</div></div>
+            <span class="db-status"></span>
+          </div>
+          <div class="db-row" data-type="police">
+            <span class="db-type-badge b"><svg width="14" height="14" viewBox="0 0 24 24"><use href="#ic-police" stroke="currentColor"/></svg></span>
+            <div>
+              <div class="db-name">Locating nearest police…</div>
+              <div class="db-meta">—</div>
+            </div>
+            <div><div class="db-eta">--:--</div><div class="db-eta-label">min away</div></div>
+            <span class="db-status"></span>
+          </div>
+          <div class="db-row" data-type="towing">
+            <span class="db-type-badge a"><svg width="14" height="14" viewBox="0 0 24 24"><use href="#ic-truck" stroke="currentColor"/></svg></span>
+            <div>
+              <div class="db-name">Locating nearest towing…</div>
+              <div class="db-meta">—</div>
+            </div>
+            <div><div class="db-eta">--:--</div><div class="db-eta-label">min away</div></div>
+            <span class="db-status"></span>
+          </div>
+        </div>
+        <div class="db-foot" id="db-foot">
+          <span class="db-status" id="db-foot-dot" style="position:static;"></span>
+          <span id="db-foot-text">Waiting for your location…</span>
+        </div>
       </div>
     </div>
   </section>
 
   <!-- How it works -->
-  <div class="section-wrap" style="padding-top:0">
+  <div class="flow-strip">
     <div class="section-head">
       <div class="section-eyebrow">How It Works</div>
-      <h2 class="section-title">3 Steps to <em>Safety</em></h2>
+      <h2 class="section-title">Three steps to <em>safety</em></h2>
     </div>
-    <div class="grid-3">
-      <div class="service-card" style="animation:none; text-align:center; padding:32px 20px;">
-        <div style="display:flex;justify-content:center;margin-bottom:16px;">
-          <div style="width:56px;height:56px;border-radius:50%;background:var(--red-dim);display:flex;align-items:center;justify-content:center;">
-            <svg width="28" height="28" viewBox="0 0 24 24"><use href="#ic-detect" stroke="var(--red2)"/></svg>
-          </div>
+    <div class="flow-grid">
+      <div class="flow-card">
+        <div class="flow-step">STEP 01</div>
+        <div class="flow-icon-wrap" style="background:var(--signal-dim);color:var(--signal);">
+          <svg width="22" height="22" viewBox="0 0 24 24"><use href="#ic-detect" stroke="currentColor"/></svg>
         </div>
-        <div style="font-family:var(--font-h);font-size:1.1rem;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;color:var(--red2);margin-bottom:8px;">Detect</div>
-        <p style="font-size:13px;color:var(--text2);font-weight:300;line-height:1.6;">Share your location or describe your emergency to our platform.</p>
+        <h3>Detect</h3>
+        <p>Share your location or describe your emergency to our platform.</p>
       </div>
-      <div class="service-card" style="animation:none; text-align:center; padding:32px 20px; border-color:rgba(255,184,0,0.25);">
-        <div style="display:flex;justify-content:center;margin-bottom:16px;">
-          <div style="width:56px;height:56px;border-radius:50%;background:var(--amber-dim);display:flex;align-items:center;justify-content:center;">
-            <svg width="28" height="28" viewBox="0 0 24 24"><use href="#ic-locate" stroke="var(--amber2)"/></svg>
-          </div>
+      <div class="flow-card">
+        <div class="flow-step">STEP 02</div>
+        <div class="flow-icon-wrap" style="background:var(--caution-dim);color:var(--caution);">
+          <svg width="22" height="22" viewBox="0 0 24 24"><use href="#ic-locate" stroke="currentColor"/></svg>
         </div>
-        <div style="font-family:var(--font-h);font-size:1.1rem;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;color:var(--amber2);margin-bottom:8px;">Locate</div>
-        <p style="font-size:13px;color:var(--text2);font-weight:300;line-height:1.6;">We instantly find the nearest trauma centers, police, and towing.</p>
+        <h3>Locate</h3>
+        <p>We instantly find the nearest trauma centers, police, and towing.</p>
       </div>
-      <div class="service-card" style="animation:none; text-align:center; padding:32px 20px; border-color:rgba(0,214,143,0.25);">
-        <div style="display:flex;justify-content:center;margin-bottom:16px;">
-          <div style="width:56px;height:56px;border-radius:50%;background:var(--green-dim);display:flex;align-items:center;justify-content:center;">
-            <svg width="28" height="28" viewBox="0 0 24 24"><use href="#ic-siren" stroke="var(--green2)"/></svg>
-          </div>
+      <div class="flow-card">
+        <div class="flow-step">STEP 03</div>
+        <div class="flow-icon-wrap" style="background:var(--highway-dim);color:var(--highway);">
+          <svg width="22" height="22" viewBox="0 0 24 24"><use href="#ic-siren" stroke="currentColor"/></svg>
         </div>
-        <div style="font-family:var(--font-h);font-size:1.1rem;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;color:var(--green2);margin-bottom:8px;">Respond</div>
-        <p style="font-size:13px;color:var(--text2);font-weight:300;line-height:1.6;">Connect with services and get real-time navigation to safety.</p>
+        <h3>Respond</h3>
+        <p>Connect with services and get real-time navigation to safety.</p>
       </div>
     </div>
   </div>
@@ -616,7 +647,7 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
     <div class="flex-between section-head">
       <div>
         <div class="section-eyebrow">Live Map</div>
-        <h2 class="section-title">Emergency <em>Facilities</em></h2>
+        <h2 class="section-title">Emergency <em>facilities</em></h2>
         <p class="section-desc">Real-time locations of hospitals, police stations, and towing services near you.</p>
       </div>
       <button class="cta-primary" style="font-size:14px;padding:11px 22px;" onclick="locateMe()">
@@ -636,15 +667,15 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
           </div>
           <button class="search-btn" onclick="searchLocation()">Search This Area</button>
           <div class="filter-chips">
-            <span class="chip hospital active" onclick="toggleFilter('hospital',this)">
+            <span class="chip active hospital" onclick="toggleFilter('hospital',this)">
               <svg width="11" height="11" viewBox="0 0 24 24"><use href="#ic-hospital" stroke="currentColor"/></svg>
               Hospital
             </span>
-            <span class="chip police active" onclick="toggleFilter('police',this)">
+            <span class="chip active police" onclick="toggleFilter('police',this)">
               <svg width="11" height="11" viewBox="0 0 24 24"><use href="#ic-police" stroke="currentColor"/></svg>
               Police
             </span>
-            <span class="chip towing active" onclick="toggleFilter('towing',this)">
+            <span class="chip active towing" onclick="toggleFilter('towing',this)">
               <svg width="11" height="11" viewBox="0 0 24 24"><use href="#ic-wrench" stroke="currentColor"/></svg>
               Towing
             </span>
@@ -655,11 +686,11 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
 
       <div>
         <div id="map"></div>
-        <div class="map-info-bar" style="gap:18px;flex-wrap:wrap;">
-          <span style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:0.05em;text-transform:uppercase;">Legend</span>
-          <span style="display:flex;align-items:center;gap:6px;font-size:12px;"><span class="info-dot r"></span> Trauma Center / Hospital</span>
-          <span style="display:flex;align-items:center;gap:6px;font-size:12px;"><span class="info-dot b"></span> Police Station</span>
-          <span style="display:flex;align-items:center;gap:6px;font-size:12px;"><span class="info-dot a"></span> Towing Service</span>
+        <div class="map-info-bar">
+          <span style="font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text3);letter-spacing:0.05em;text-transform:uppercase;">Legend</span>
+          <span style="display:flex;align-items:center;gap:6px;"><span class="info-dot r"></span> Trauma Center / Hospital</span>
+          <span style="display:flex;align-items:center;gap:6px;"><span class="info-dot b"></span> Police Station</span>
+          <span style="display:flex;align-items:center;gap:6px;"><span class="info-dot a"></span> Towing Service</span>
         </div>
       </div>
     </div>
@@ -671,15 +702,15 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
   <div class="section-wrap">
     <div class="section-head">
       <div class="section-eyebrow">Emergency Services</div>
-      <h2 class="section-title">Reach Help <em>Instantly</em></h2>
-      <p class="section-desc">One-tap access to every emergency service. Cards glow to indicate live availability.</p>
+      <h2 class="section-title">Reach help <em>instantly</em></h2>
+      <p class="section-desc">One-tap access to every emergency service, with live response-time tracking.</p>
     </div>
 
-    <div class="grid-2" style="gap:18px;">
+    <div class="grid-2" style="gap:16px;">
       <!-- Trauma Center -->
       <div class="service-card red" id="card-hospital">
         <div class="svc-icon r">
-          <svg width="28" height="28" viewBox="0 0 24 24"><use href="#ic-hospital" stroke="var(--red2)"/></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24"><use href="#ic-hospital" stroke="currentColor"/></svg>
           <span class="icon-ping r"></span>
         </div>
         <div class="svc-title r">Trauma Center</div>
@@ -690,7 +721,7 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
           <div class="svc-num-row"><span class="svc-num-label">RML Hospital</span><span class="svc-num-val r">011-2336-5525</span></div>
         </div>
         <div class="resp-bar-wrap">
-          <div class="resp-label"><span>Response time</span><span style="color:var(--red2)">~4 min avg</span></div>
+          <div class="resp-label"><span>RESPONSE TIME</span><span style="color:#ff6b5e">~4 MIN AVG</span></div>
           <div class="resp-track"><div class="resp-fill r" style="width:0%" data-w="72%"></div></div>
         </div>
         <button class="call-btn r" onclick="callService('Trauma Center Emergency','102')">
@@ -702,7 +733,7 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
       <!-- Police -->
       <div class="service-card blue" id="card-police">
         <div class="svc-icon b">
-          <svg width="28" height="28" viewBox="0 0 24 24"><use href="#ic-police" stroke="var(--blue2)"/></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24"><use href="#ic-police" stroke="currentColor"/></svg>
           <span class="icon-ping b"></span>
         </div>
         <div class="svc-title b">Police Station</div>
@@ -713,10 +744,10 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
           <div class="svc-num-row"><span class="svc-num-label">Women Helpline</span><span class="svc-num-val b">1091</span></div>
         </div>
         <div class="resp-bar-wrap">
-          <div class="resp-label"><span>Response time</span><span style="color:var(--blue2)">~6 min avg</span></div>
+          <div class="resp-label"><span>RESPONSE TIME</span><span style="color:#8ab4e8">~6 MIN AVG</span></div>
           <div class="resp-track"><div class="resp-fill b" style="width:0%" data-w="55%"></div></div>
         </div>
-        <button class="call-btn b" onclick="callService('Police Emergency','100','#1e90ff')">
+        <button class="call-btn b" onclick="callService('Police Emergency','100','#4C7CB8')">
           <svg width="14" height="14" viewBox="0 0 24 24"><use href="#ic-phone" stroke="white"/></svg>
           Call 100 — Police
         </button>
@@ -725,7 +756,7 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
       <!-- Towing -->
       <div class="service-card amber" id="card-towing">
         <div class="svc-icon a">
-          <svg width="28" height="28" viewBox="0 0 24 24"><use href="#ic-truck" stroke="var(--amber2)"/></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24"><use href="#ic-truck" stroke="currentColor"/></svg>
           <span class="icon-ping a"></span>
         </div>
         <div class="svc-title a">Towing Service</div>
@@ -736,11 +767,11 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
           <div class="svc-num-row"><span class="svc-num-label">National Towing (24×7)</span><span class="svc-num-val a">+91-98103-33333</span></div>
         </div>
         <div class="resp-bar-wrap">
-          <div class="resp-label"><span>Response time</span><span style="color:var(--amber2)">~12 min avg</span></div>
+          <div class="resp-label"><span>RESPONSE TIME</span><span style="color:var(--caution)">~12 MIN AVG</span></div>
           <div class="resp-track"><div class="resp-fill a" style="width:0%" data-w="42%"></div></div>
         </div>
-        <button class="call-btn a" onclick="callService('NHAI Towing','1033','#ffb400')">
-          <svg width="14" height="14" viewBox="0 0 24 24"><use href="#ic-phone" stroke="#060a0f"/></svg>
+        <button class="call-btn a" onclick="callService('NHAI Towing','1033','#F5A623')">
+          <svg width="14" height="14" viewBox="0 0 24 24"><use href="#ic-phone" stroke="#0B0E14"/></svg>
           Call 1033 — NHAI
         </button>
       </div>
@@ -748,7 +779,7 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
       <!-- National Helplines -->
       <div class="service-card teal" id="card-general">
         <div class="svc-icon g">
-          <svg width="28" height="28" viewBox="0 0 24 24"><use href="#ic-headset" stroke="var(--green2)"/></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24"><use href="#ic-headset" stroke="currentColor"/></svg>
           <span class="icon-ping g"></span>
         </div>
         <div class="svc-title g">National Helplines</div>
@@ -759,35 +790,35 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
           <div class="svc-num-row"><span class="svc-num-label">iCall Mental Health</span><span class="svc-num-val g">9152987821</span></div>
         </div>
         <div class="resp-bar-wrap">
-          <div class="resp-label"><span>System uptime</span><span style="color:var(--green2)">99.9% SLA</span></div>
-          <div class="resp-track"><div class="resp-fill" style="width:0%;background:linear-gradient(90deg,var(--green),var(--green2));" data-w="92%"></div></div>
+          <div class="resp-label"><span>SYSTEM UPTIME</span><span style="color:#4FD89A">99.9% SLA</span></div>
+          <div class="resp-track"><div class="resp-fill" style="width:0%;background:var(--highway);" data-w="92%"></div></div>
         </div>
-        <button class="call-btn g" onclick="callService('National Emergency','112','#00d68f')">
-          <svg width="14" height="14" viewBox="0 0 24 24"><use href="#ic-phone" stroke="#060a0f"/></svg>
+        <button class="call-btn g" onclick="callService('National Emergency','112','#1C9C63')">
+          <svg width="14" height="14" viewBox="0 0 24 24"><use href="#ic-phone" stroke="#0B0E14"/></svg>
           Call 112 — Emergency
         </button>
       </div>
     </div>
 
     <!-- Availability strip -->
-    <div class="mt-32" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;">
-      <div style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:14px;">Live Service Availability</div>
+    <div class="mt-32 avail-strip">
+      <div class="avail-strip-head">Live Service Availability</div>
       <div class="grid-4" style="gap:12px;">
-        <div style="text-align:center;">
-          <div style="font-family:var(--font-h);font-size:1.8rem;font-weight:800;color:var(--red);line-height:1;" id="avail-amb">—</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:0.05em;">Ambulances</div>
+        <div>
+          <div class="avail-num" style="color:var(--signal);" id="avail-amb">—</div>
+          <div class="avail-label">Ambulances</div>
         </div>
-        <div style="text-align:center;">
-          <div style="font-family:var(--font-h);font-size:1.8rem;font-weight:800;color:var(--blue2);line-height:1;" id="avail-beds">—</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:0.05em;">ICU Beds</div>
+        <div>
+          <div class="avail-num" style="color:var(--steel);" id="avail-beds">—</div>
+          <div class="avail-label">ICU Beds</div>
         </div>
-        <div style="text-align:center;">
-          <div style="font-family:var(--font-h);font-size:1.8rem;font-weight:800;color:var(--amber);line-height:1;" id="avail-tow">—</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:0.05em;">Tow Trucks</div>
+        <div>
+          <div class="avail-num" style="color:var(--caution);" id="avail-tow">—</div>
+          <div class="avail-label">Tow Trucks</div>
         </div>
-        <div style="text-align:center;">
-          <div style="font-family:var(--font-h);font-size:1.8rem;font-weight:800;color:var(--green2);line-height:1;" id="avail-police">—</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:0.05em;">Police Units</div>
+        <div>
+          <div class="avail-num" style="color:var(--highway);" id="avail-police">—</div>
+          <div class="avail-label">Police Units</div>
         </div>
       </div>
     </div>
@@ -799,7 +830,7 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
   <div class="section-wrap">
     <div class="section-head">
       <div class="section-eyebrow">AI Assistant</div>
-      <h2 class="section-title">RoadSoS <em>Assistant</em></h2>
+      <h2 class="section-title">RoadSoS <em>assistant</em></h2>
       <p class="section-desc">Ask about nearest emergency services, first aid, road laws, or report incidents.</p>
     </div>
 
@@ -807,19 +838,19 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
       <div class="chat-window">
         <div class="chat-topbar">
           <div class="bot-avatar">
-            <svg width="18" height="18" viewBox="0 0 24 24"><use href="#ic-bot" stroke="white"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24"><use href="#ic-bot" stroke="currentColor"/></svg>
           </div>
           <div>
             <div class="bot-name">RoadSoS AI</div>
-            <div class="bot-status">● Online — Emergency Mode</div>
+            <div class="bot-status">● ONLINE — EMERGENCY MODE</div>
           </div>
-          <div style="margin-left:auto;font-size:12px;color:var(--text3);">Response &lt;2s</div>
+          <div style="margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--text3);">Response &lt;2s</div>
         </div>
 
         <div class="chat-messages" id="chat-messages">
           <div class="msg bot" style="max-width:100%">
             <span class="msg-avatar">
-              <svg width="20" height="20" viewBox="0 0 24 24"><use href="#ic-bot" stroke="var(--text2)"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24"><use href="#ic-bot" stroke="currentColor"/></svg>
             </span>
             <div>
               <div class="msg-bubble">
@@ -846,50 +877,50 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
         <div class="qp-title">Quick Queries</div>
         <div class="qp-list">
           <div class="qp-item" onclick="quickChat('nearest ambulance')">
-            <span class="qp-icon"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-ambulance" stroke="var(--text2)"/></svg></span>
+            <span class="qp-icon"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-ambulance" stroke="currentColor"/></svg></span>
             Nearest ambulance
           </div>
           <div class="qp-item" onclick="quickChat('nearest hospital trauma center')">
-            <span class="qp-icon"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-hospital" stroke="var(--text2)"/></svg></span>
+            <span class="qp-icon"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-hospital" stroke="currentColor"/></svg></span>
             Nearest hospital
           </div>
           <div class="qp-item" onclick="quickChat('nearest police station')">
-            <span class="qp-icon"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-police" stroke="var(--text2)"/></svg></span>
+            <span class="qp-icon"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-police" stroke="currentColor"/></svg></span>
             Nearest police
           </div>
           <div class="qp-item" onclick="quickChat('towing service near me')">
-            <span class="qp-icon"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-truck" stroke="var(--text2)"/></svg></span>
+            <span class="qp-icon"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-truck" stroke="currentColor"/></svg></span>
             Towing service
           </div>
           <div class="qp-item" onclick="quickChat('first aid for accident victim')">
-            <span class="qp-icon"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-firstaid" stroke="var(--text2)"/></svg></span>
+            <span class="qp-icon"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-firstaid" stroke="currentColor"/></svg></span>
             First aid tips
           </div>
           <div class="qp-item" onclick="quickChat('report road pothole hazard')">
-            <span class="qp-icon"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-alert" stroke="var(--text2)"/></svg></span>
+            <span class="qp-icon"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-alert" stroke="currentColor"/></svg></span>
             Report hazard
           </div>
           <div class="qp-item" onclick="quickChat('traffic law for drunk driving India')">
-            <span class="qp-icon"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-law" stroke="var(--text2)"/></svg></span>
+            <span class="qp-icon"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-law" stroke="currentColor"/></svg></span>
             Traffic laws
           </div>
           <div class="qp-item" onclick="quickChat('what to do after road accident')">
-            <span class="qp-icon"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-clipboard" stroke="var(--text2)"/></svg></span>
+            <span class="qp-icon"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-clipboard" stroke="currentColor"/></svg></span>
             Post-accident steps
           </div>
         </div>
 
         <!-- Emergency strip -->
-        <div style="margin-top:18px;padding:14px;background:var(--red-dim);border:1px solid rgba(255,45,59,0.3);border-radius:var(--radius-sm);">
-          <div style="font-size:12px;font-weight:700;color:var(--red2);margin-bottom:8px;letter-spacing:0.05em;text-transform:uppercase;display:flex;align-items:center;gap:6px;">
+        <div class="emg-strip">
+          <div class="emg-strip-head">
             <svg width="12" height="12" viewBox="0 0 24 24"><use href="#ic-siren" stroke="currentColor"/></svg>
             Direct Emergency
           </div>
-          <a href="tel:112" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:var(--red);color:#fff;border-radius:var(--radius-sm);text-decoration:none;font-weight:700;font-size:18px;letter-spacing:0.1em;margin-bottom:6px;">
+          <a href="tel:112" class="emg-call-btn">
             <svg width="18" height="18" viewBox="0 0 24 24"><use href="#ic-phone" stroke="white"/></svg>
             112
           </a>
-          <div style="font-size:11px;color:var(--text3);text-align:center;">National Emergency Helpline</div>
+          <div class="emg-strip-sub">National Emergency Helpline</div>
         </div>
       </div>
     </div>
@@ -901,12 +932,11 @@ footer { border-top: 1px solid var(--border); background: var(--bg1); padding: 2
   <div class="footer-inner">
     <div class="footer-copy">
       <strong>RoadSoS</strong> — AI-Powered Emergency Response &amp; Roadside Assistance Platform<br/><br/>
-      RoadSoS helps users get immediate support during roadside emergencies by connecting them with verified emergency contacts, nearby services, and real-time assistance.<br/><br/>
-      From accident response and ambulance access to towing support, fuel delivery, and emergency guidance, RoadSoS is designed to make roads safer and emergency help faster, smarter, and more accessible for everyone.
+      RoadSoS helps users get immediate support during roadside emergencies by connecting them with verified emergency contacts, nearby services, and real-time assistance.
     </div>
     <div class="footer-badge">
       <svg width="14" height="14" viewBox="0 0 24 24"><use href="#ic-clock" stroke="currentColor"/></svg>
-      24/7 Emergency Support
+      24/7 EMERGENCY SUPPORT
     </div>
   </div>
 </footer>
@@ -916,15 +946,91 @@ window.userLat = null;
 window.userLng = null;
 if (navigator.geolocation) {
   navigator.geolocation.getCurrentPosition(
-    pos => { window.userLat = pos.coords.latitude; window.userLng = pos.coords.longitude; },
-    err => console.log('Location denied')
+    pos => {
+      window.userLat = pos.coords.latitude;
+      window.userLng = pos.coords.longitude;
+      loadDispatchBoard();
+    },
+    err => {
+      console.log('Location denied');
+      setDispatchFallback('Location access denied — showing Delhi-area defaults.');
+      loadDispatchBoard(28.5672, 77.2100); // sensible default center
+    }
   );
+} else {
+  setDispatchFallback('Geolocation unavailable in this browser.');
+  loadDispatchBoard(28.5672, 77.2100);
+}
+
+const DB_API_BASE = 'https://road-sos-taupe.vercel.app';
+const DB_TYPE_TO_ENDPOINT = { hospital: 'nearest-hospital', police: 'nearest-police', towing: 'nearest-towing' };
+const DB_AVG_KMH = 28; // rough urban driving speed for ETA estimate, used only when API doesn't return time
+
+function setDispatchFallback(msg) {
+  const el = document.getElementById('db-foot-text');
+  if (el) el.textContent = msg;
+}
+
+function fmtEta(distanceKm) {
+  if (typeof distanceKm !== 'number' || isNaN(distanceKm)) return '--:--';
+  const minutes = Math.max(1, Math.round((distanceKm / DB_AVG_KMH) * 60));
+  const h = Math.floor(minutes / 60), m = minutes % 60;
+  return h > 0 ? `${h}:${String(m).padStart(2,'0')}` : `00:${String(m).padStart(2,'0')}`;
+}
+
+async function loadDispatchBoard(lat, lng) {
+  lat = lat ?? window.userLat;
+  lng = lng ?? window.userLng;
+  if (lat == null || lng == null) return; // wait for geolocation callback
+
+  const rows = document.querySelectorAll('#db-rows .db-row');
+  let anyError = false;
+
+  await Promise.all(Array.from(rows).map(async (row) => {
+    const type = row.getAttribute('data-type');
+    const endpoint = DB_TYPE_TO_ENDPOINT[type];
+    const nameEl = row.querySelector('.db-name');
+    const metaEl = row.querySelector('.db-meta');
+    const etaEl = row.querySelector('.db-eta');
+    const dotEl = row.querySelector('.db-status');
+
+    try {
+      const res = await fetch(`${DB_API_BASE}/${endpoint}?lat=${lat}&lng=${lng}&limit=1&radius=15`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const nearest = data.results && data.results[0];
+
+      if (!nearest) {
+        nameEl.textContent = `No ${type} found nearby`;
+        metaEl.textContent = '—';
+        etaEl.textContent = '--:--';
+        dotEl.classList.remove('live');
+        return;
+      }
+
+      nameEl.textContent = nearest.name || `Nearest ${type}`;
+      metaEl.textContent = [nearest.phone, nearest.openingHours || '24×7'].filter(Boolean).join(' · ');
+      etaEl.textContent = fmtEta(nearest.distanceKm);
+      dotEl.classList.add('live');
+    } catch (err) {
+      console.log(`Dispatch board ${type} error:`, err.message);
+      anyError = true;
+      nameEl.textContent = `Couldn't load ${type} data`;
+      metaEl.textContent = 'Check connection';
+      etaEl.textContent = '--:--';
+      dotEl.classList.remove('live');
+    }
+  }));
+
+  setDispatchFallback(anyError
+    ? 'Some live data unavailable — showing what we could fetch.'
+    : 'Updated continuously from live location data');
 }
 
 async function loadRealPlaces() {
   const lat = window.userLat || 28.5562;
   const lng = window.userLng || 77.2010;
-  document.getElementById('place-list').innerHTML = '<div style="padding:20px;color:#5ca8ff;text-align:center;">Loading nearby places...</div>';
+  document.getElementById('place-list').innerHTML = '<div style="padding:20px;color:var(--text3);text-align:center;font-size:13px;">Loading nearby places...</div>';
   try {
     const [h, p, t] = await Promise.all([
       fetch(`https://road-sos-taupe.vercel.app/nearest-hospital?lat=${lat}&lng=${lng}&limit=8&radius=5`).then(r=>r.json()),
@@ -939,30 +1045,13 @@ async function loadRealPlaces() {
   } catch(err) { console.log('loadRealPlaces error:', err.message); }
 }
 
-(function initRoadCanvas() {
-  const canvas = document.getElementById('road-canvas');
-  const ctx = canvas.getContext('2d');
-  let W, H, offset = 0;
-  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
-  window.addEventListener('resize', resize); resize();
-  const LANES = 5, DASH_H = 40, GAP_H = 30, SPEED = 1.2;
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-    const laneW = W / LANES;
-    for (let l = 0; l < LANES; l++) {
-      const x = laneW * l + laneW / 2;
-      ctx.beginPath(); ctx.setLineDash([DASH_H, GAP_H]); ctx.lineDashOffset = -offset;
-      ctx.strokeStyle = l % 2 === 0 ? 'rgba(255,45,59,0.5)' : 'rgba(255,184,0,0.3)';
-      ctx.lineWidth = 1.5; ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-    }
-    const scanY = (offset * 2) % H;
-    const grad = ctx.createLinearGradient(0, scanY - 30, 0, scanY + 30);
-    grad.addColorStop(0, 'rgba(30,144,255,0)'); grad.addColorStop(0.5, 'rgba(30,144,255,0.06)'); grad.addColorStop(1, 'rgba(30,144,255,0)');
-    ctx.fillStyle = grad; ctx.fillRect(0, scanY - 30, W, 60);
-    offset += SPEED; requestAnimationFrame(draw);
-  }
-  draw();
-})();
+/* Dispatch board live clock */
+function tickClock() {
+  const el = document.getElementById('db-time');
+  if (el) el.textContent = new Date().toLocaleTimeString('en-IN', { hour12: false });
+}
+tickClock();
+setInterval(tickClock, 1000);
 
 function switchTab(tabId, btn) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -986,7 +1075,7 @@ function countUp(id, target, duration) {
     if (start >= target) clearInterval(timer);
   }, 16);
 }
-setTimeout(() => { countUp('counter-incidents', 478000, 1800); countUp('counter-centers', 812, 1600); countUp('counter-saved', 172000, 2000); }, 400);
+setTimeout(() => { countUp('counter-incidents', 478000, 1800); countUp('counter-centers', 812, 1600); }, 400);
 
 function animateServiceBars() {
   document.querySelectorAll('.resp-fill').forEach(bar => { const t = bar.getAttribute('data-w'); setTimeout(() => { bar.style.width = t; }, 200); });
@@ -1004,14 +1093,18 @@ function animateServiceBars() {
 }
 
 function callService(name, num, color) {
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (isMobile) { window.location.href = 'tel:' + num; return; }
-  color = color || '#ff2d3b';
+  // Always attempt the tel: link — works on phones, and on desktop will
+  // trigger whatever calling app (Skype/FaceTime/Google Voice/etc.) is
+  // registered to handle it, if any. We can't detect success from JS,
+  // so we also always show the number so the person isn't left guessing.
+  window.location.href = 'tel:' + num;
+
+  color = color || '#E0382C';
   const d = document.getElementById('call-toast'); if(d) d.remove();
   const t = document.createElement('div');
   t.id = 'call-toast';
-  t.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:'+color+';color:white;padding:30px 40px;border-radius:16px;font-size:24px;font-weight:bold;z-index:999999;text-align:center;box-shadow:0 0 40px '+color+'99;';
-  t.innerHTML = name + '<br>' + num + '<br><br><button onclick="this.parentElement.remove()" style="padding:8px 24px;border-radius:8px;border:none;background:white;color:'+color+';font-weight:bold;cursor:pointer;font-size:16px;">Close</button>';
+  t.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#141925;border:1px solid '+color+';color:white;padding:32px 44px;border-radius:14px;font-family:Inter,sans-serif;font-size:20px;font-weight:600;z-index:999999;text-align:center;box-shadow:0 24px 60px -10px rgba(0,0,0,0.6);max-width:90vw;';
+  t.innerHTML = '<div style="font-size:13px;color:#94A1B8;font-weight:500;margin-bottom:8px;">'+name+'</div><div style="font-family:\'IBM Plex Mono\',monospace;color:'+color+';font-size:28px;font-weight:700;margin-bottom:6px;">'+num+'</div><div style="font-size:11.5px;color:#4D5870;margin-bottom:18px;">If your dialer didn\'t open, call this number manually.</div><button onclick="this.parentElement.remove()" style="padding:9px 26px;border-radius:8px;border:1px solid #2D4159;background:#1A2030;color:#F4F6F9;font-weight:600;cursor:pointer;font-size:13px;">Close</button>';
   document.body.appendChild(t);
 }
 
@@ -1019,11 +1112,11 @@ let map = null, mapMarkers = [];
 let activeFilters = { hospital: true, police: true, towing: true };
 const PLACES = [];
 const TYPE_ICON_SVG = {
-  hospital: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-hospital"/></svg>`,
-  police:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-police"/></svg>`,
-  towing:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--amber2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-truck"/></svg>`,
+  hospital: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--signal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-hospital"/></svg>`,
+  police:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--steel)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-police"/></svg>`,
+  towing:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--caution)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-truck"/></svg>`,
 };
-const TYPE_COLOR = { hospital:'#ff2d3b', police:'#1e90ff', towing:'#ffb800' };
+const TYPE_COLOR = { hospital:'#E0382C', police:'#4C7CB8', towing:'#F5A623' };
 const TYPE_LABEL = { hospital:'Hospital', police:'Police', towing:'Towing' };
 
 function initMap() {
@@ -1032,7 +1125,7 @@ function initMap() {
   map = L.map('map', { center, zoom: 13 });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
   if (window.userLat && window.userLng) {
-    L.circleMarker([window.userLat, window.userLng], { radius: 10, color: '#00e5d1', fillColor: '#00e5d1', fillOpacity: 0.5, weight: 3 }).addTo(map).bindPopup('<strong>Your Location</strong>').openPopup();
+    L.circleMarker([window.userLat, window.userLng], { radius: 10, color: '#1C9C63', fillColor: '#1C9C63', fillOpacity: 0.5, weight: 3 }).addTo(map).bindPopup('<strong>Your Location</strong>').openPopup();
   }
   renderPlaces();
   setTimeout(() => { if (window.userLat && window.userLng) map.flyTo([window.userLat, window.userLng], 14); loadRealPlaces(); }, 2000);
@@ -1045,12 +1138,12 @@ function renderPlaces() {
     if (!activeFilters[place.type]) return;
     const divIcon = L.divIcon({
       className: '',
-      html: `<div style="width:36px;height:36px;border-radius:50%;background:${TYPE_COLOR[place.type]};display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px ${TYPE_COLOR[place.type]}99;border:2px solid rgba(255,255,255,0.2);cursor:pointer;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      html: `<div style="width:34px;height:34px;border-radius:8px;background:${TYPE_COLOR[place.type]};display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,0.35);border:2px solid rgba(255,255,255,0.15);cursor:pointer;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           ${place.type==='hospital'?'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/>':place.type==='police'?'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>':'<rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>'}
         </svg>
       </div>`,
-      iconSize: [36, 36], iconAnchor: [18, 18],
+      iconSize: [34, 34], iconAnchor: [17, 17],
     });
     const marker = L.marker([place.lat, place.lng], { icon: divIcon }).addTo(map)
       .bindPopup(`<div style="font-family:sans-serif;min-width:160px;"><strong style="font-size:14px;">${place.name}</strong><br/><span style="font-size:12px;color:#666;">Distance: ${place.dist}</span><br/><span style="font-size:12px;color:#666;">Open: ${place.open}</span></div>`);
@@ -1083,7 +1176,7 @@ function locateMe() {
     const { latitude: lat, longitude: lng } = pos.coords;
     if (!map) { setTimeout(() => locateMe(), 300); return; }
     map.flyTo([lat, lng], 15, { animate: true, duration: 1 });
-    L.circleMarker([lat, lng], { radius: 12, color: '#00e5d1', fillColor: '#00e5d1', fillOpacity: 0.6, weight: 3 }).addTo(map).bindPopup('<strong>You are here</strong>').openPopup();
+    L.circleMarker([lat, lng], { radius: 12, color: '#1C9C63', fillColor: '#1C9C63', fillOpacity: 0.6, weight: 3 }).addTo(map).bindPopup('<strong>You are here</strong>').openPopup();
   }, () => { alert('Could not access your location. Please allow location access.'); });
 }
 
@@ -1110,7 +1203,7 @@ async function sendChat() {
   addMsg(`<div class="msg-bubble">${text}</div>`, 'user');
   const typingDiv = document.createElement('div');
   typingDiv.className = 'msg bot'; typingDiv.id = 'typing-indicator';
-  typingDiv.innerHTML = `<span class="msg-avatar"><svg width="20" height="20" viewBox="0 0 24 24"><use href="#ic-bot" stroke="var(--text2)"/></svg></span><div><div class="typing-anim"><span></span><span></span><span></span></div></div>`;
+  typingDiv.innerHTML = `<span class="msg-avatar"><svg width="16" height="16" viewBox="0 0 24 24"><use href="#ic-bot" stroke="currentColor"/></svg></span><div><div class="typing-anim"><span></span><span></span><span></span></div></div>`;
   document.getElementById('chat-messages').appendChild(typingDiv);
   document.getElementById('chat-messages').scrollTop = 99999;
   try {
@@ -1130,7 +1223,7 @@ async function sendChat() {
 
 function addMsg(html, role) {
   const wrap = document.createElement('div'); wrap.className = `msg ${role}`;
-  const avatarSvg = `<svg width="20" height="20" viewBox="0 0 24 24"><use href="${role==='bot'?'#ic-bot':'#ic-user'}" stroke="var(--text2)"/></svg>`;
+  const avatarSvg = `<svg width="16" height="16" viewBox="0 0 24 24"><use href="${role==='bot'?'#ic-bot':'#ic-user'}" stroke="currentColor"/></svg>`;
   if (role === 'bot') { wrap.innerHTML = `<span class="msg-avatar">${avatarSvg}</span><div>${html}</div>`; }
   else { wrap.innerHTML = `<div>${html}</div><span class="msg-avatar">${avatarSvg}</span>`; }
   const container = document.getElementById('chat-messages');
